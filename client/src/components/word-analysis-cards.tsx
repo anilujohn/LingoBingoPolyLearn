@@ -26,7 +26,12 @@ export function WordMeaningsCard({ wordMeanings, isLoading = false }: WordMeanin
               <div key={index} className="text-sm p-2 bg-gray-50 rounded-md border-l-4 border-blue-300">
                 <span className="font-semibold text-black">{word.word}</span>
                 {word.transliteration && (
-                  <span className="font-bold text-blue-700"> ({word.transliteration})</span>
+                  <span 
+                    className="font-bold text-blue-700"
+                    dangerouslySetInnerHTML={{ 
+                      __html: ` (${renderMarkdownBold(word.transliteration)})` 
+                    }}
+                  />
                 )}
                 <span className="text-gray-800 ml-2">→ {word.meaning}</span>
               </div>
