@@ -426,6 +426,14 @@ export default function LanguageInterface() {
                   <Textarea
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (inputText.trim() && !translateMutation.isPending) {
+                          translateMutation.mutate();
+                        }
+                      }
+                    }}
                     placeholder="Type your message here..."
                     className="min-h-20 pr-12"
                     data-testid="translate-input"
@@ -515,7 +523,7 @@ export default function LanguageInterface() {
                     </Card>
                   )}
 
-                  {translationResult.quickTip && (
+                  {translationResult.quickTip && translationResult.quickTip.trim() && !translationResult.quickTip.includes("will appear here") && (
                     <Card className="bg-blue-50 border-blue-200">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-blue-900 text-base">Quick Tip</CardTitle>
@@ -636,12 +644,7 @@ export default function LanguageInterface() {
                       <div className="space-y-3">
                         <div className="text-center space-y-3">
                           <div>
-                            <h3 className="text-base font-medium text-black mb-2">
-                              {learningMode === 'guided-kn-en' 
-                                ? currentContent.english 
-                                : currentContent.english}
-                            </h3>
-                            {learningMode === 'guided-kn-en' && (
+                            {learningMode === 'guided-kn-en' ? (
                               <div className="mb-3">
                                 <p className="text-sm text-gray-500 mb-1">{currentContent.target}</p>
                                 <div className="flex items-center justify-center gap-3 mb-2">
@@ -657,6 +660,10 @@ export default function LanguageInterface() {
                                   </Button>
                                 </div>
                               </div>
+                            ) : (
+                              <h3 className="text-base font-medium text-black mb-2">
+                                {currentContent.english}
+                              </h3>
                             )}
                           </div>
                           <p className="text-sm text-gray-600">
@@ -670,6 +677,14 @@ export default function LanguageInterface() {
                           <Textarea
                             value={userAnswer}
                             onChange={(e) => setUserAnswer(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                if (userAnswer.trim() && !checkAnswerMutation.isPending) {
+                                  checkAnswerMutation.mutate();
+                                }
+                              }
+                            }}
                             placeholder="Type or click the mic to speak..."
                             className="min-h-16 pr-12"
                             data-testid="answer-input"
@@ -767,42 +782,46 @@ export default function LanguageInterface() {
                   </Card>
                 )}
 
-                {/* Word Meanings and Quick Tip - Consistent with translate mode */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Word Meanings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {(currentContent as any).wordMeanings && (currentContent as any).wordMeanings.length > 0 ? (
-                        <div className="space-y-1">
-                          {(currentContent as any).wordMeanings.map((word: any, index: number) => (
-                            <div key={index} className="text-sm p-2 bg-gray-50 rounded-md border-l-4 border-blue-300">
-                              <span className="font-semibold text-black">{word.word}</span>
-                              {word.transliteration && (
-                                <span className="font-bold text-blue-700"> ({word.transliteration})</span>
-                              )}
-                              <span className="text-gray-800 ml-2">→ {word.meaning}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-600">Loading word analysis...</p>
-                      )}
-                    </CardContent>
-                  </Card>
-                  
-                  <Card className="bg-blue-50 border-blue-200">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-blue-900 text-base">Quick Tip</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-blue-800 text-sm">
-                        {(currentContent as any).quickTip || "Educational tip will appear here..."}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
+                {/* Word Meanings and Quick Tip - Only show after reveal answer */}
+                {showCorrectAnswer && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Word Meanings</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {(currentContent as any).wordMeanings && (currentContent as any).wordMeanings.length > 0 ? (
+                          <div className="space-y-1">
+                            {(currentContent as any).wordMeanings.map((word: any, index: number) => (
+                              <div key={index} className="text-sm p-2 bg-gray-50 rounded-md border-l-4 border-blue-300">
+                                <span className="font-semibold text-black">{word.word}</span>
+                                {word.transliteration && (
+                                  <span className="font-bold text-blue-700"> ({word.transliteration})</span>
+                                )}
+                                <span className="text-gray-800 ml-2">→ {word.meaning}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-600">Loading word analysis...</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    {(currentContent as any).quickTip && (currentContent as any).quickTip.trim() && !(currentContent as any).quickTip.includes("will appear here") && (
+                      <Card className="bg-blue-50 border-blue-200">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-blue-900 text-base">Quick Tip</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-blue-800 text-sm">
+                            {(currentContent as any).quickTip}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
 
                 {/* Next Sentence Button */}
                 <div className="text-center">
