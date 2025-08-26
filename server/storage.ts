@@ -243,7 +243,11 @@ export class MemStorage implements IStorage {
 
   async createLanguage(language: InsertLanguage): Promise<Language> {
     const id = randomUUID();
-    const newLanguage: Language = { ...language, id };
+    const newLanguage: Language = { 
+      ...language, 
+      id,
+      isActive: language.isActive ?? true 
+    };
     this.languages.set(id, newLanguage);
     return newLanguage;
   }
@@ -272,6 +276,10 @@ export class MemStorage implements IStorage {
     const newProgress: UserProgress = { 
       ...progress, 
       id,
+      level: progress.level ?? "basic",
+      progress: progress.progress ?? 0,
+      lessonsCompleted: progress.lessonsCompleted ?? 0,
+      currentStreak: progress.currentStreak ?? 0,
       lastActivity: new Date(),
     };
     this.userProgress.set(`${progress.userId}-${progress.languageId}`, newProgress);
@@ -305,7 +313,12 @@ export class MemStorage implements IStorage {
 
   async createLesson(lesson: InsertLesson): Promise<Lesson> {
     const id = randomUUID();
-    const newLesson: Lesson = { ...lesson, id };
+    const newLesson: Lesson = { 
+      ...lesson, 
+      id,
+      isActive: lesson.isActive ?? true,
+      xpReward: lesson.xpReward ?? 10
+    };
     this.lessons.set(id, newLesson);
     return newLesson;
   }
@@ -325,7 +338,11 @@ export class MemStorage implements IStorage {
 
   async createAchievement(achievement: InsertAchievement): Promise<Achievement> {
     const id = randomUUID();
-    const newAchievement: Achievement = { ...achievement, id };
+    const newAchievement: Achievement = { 
+      ...achievement, 
+      id,
+      xpReward: achievement.xpReward ?? 50
+    };
     this.achievements.set(id, newAchievement);
     return newAchievement;
   }
