@@ -222,6 +222,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/languages/translate-with-analysis", async (req, res) => {
+    try {
+      const { text, sourceLang, targetLang, languageCode, model } = req.body;
+      
+      const config: Partial<GeminiConfig> = model ? { model } : {};
+      
+      const result = await geminiService.translateWithAnalysis(
+        text,
+        sourceLang,
+        targetLang,
+        languageCode,
+        config
+      );
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error translating with analysis:", error);
+      res.status(500).json({ message: "Failed to translate with analysis" });
+    }
+  });
+
+  app.post("/api/languages/check-answer-detailed", async (req, res) => {
+    try {
+      const { userAnswer, correctAnswer, context, mode, model } = req.body;
+      
+      const config: Partial<GeminiConfig> = model ? { model } : {};
+      
+      const result = await geminiService.checkAnswerDetailed(
+        userAnswer,
+        correctAnswer,
+        context,
+        mode,
+        config
+      );
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error checking answer with details:", error);
+      res.status(500).json({ message: "Failed to check answer with details" });
+    }
+  });
+
   // Lesson endpoints
   app.get("/api/lessons/current/:languageId/:mode", async (req, res) => {
     try {

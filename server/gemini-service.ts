@@ -227,6 +227,157 @@ Return ONLY a JSON object with this structure:
     
     return descriptions[level] || "General level";
   }
+
+  async translateWithAnalysis(
+    text: string,
+    sourceLang: string,
+    targetLang: string,
+    languageCode: string,
+    config: Partial<GeminiConfig> = {}
+  ): Promise<{
+    translation: string;
+    transliteration?: string;
+    wordMeanings?: Array<{
+      word: string;
+      meaning: string;
+      transliteration?: string;
+    }>;
+    quickTip?: string;
+  }> {
+    const modelConfig = { ...this.defaultConfig, ...config };
+    
+    const prompt = `You are a language learning expert. Translate the following text from ${sourceLang} to ${targetLang} and provide detailed analysis.
+
+Text to translate: "${text}"
+
+Provide a comprehensive translation analysis including:
+1. Accurate translation in native script
+2. Transliteration in Roman script
+3. Word-by-word breakdown with meanings
+4. Cultural or linguistic tip about the usage
+
+Return ONLY a JSON object with this structure:
+{
+  "translation": "Native script translation",
+  "transliteration": "Roman script transliteration",
+  "wordMeanings": [
+    {
+      "word": "original word",
+      "meaning": "meaning in English",
+      "transliteration": "roman script of translated word"
+    }
+  ],
+  "quickTip": "Cultural tip or linguistic nuance about this phrase"
+}
+
+Make the analysis practical and helpful for language learners.`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: modelConfig.model,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              translation: { type: "string" },
+              transliteration: { type: "string" },
+              wordMeanings: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    word: { type: "string" },
+                    meaning: { type: "string" },
+                    transliteration: { type: "string" }
+                  },
+                  required: ["word", "meaning"]
+                }
+              },
+              quickTip: { type: "string" }
+            },
+            required: ["translation"]
+          }
+        }
+      });
+
+      const jsonText = response.text;
+      if (!jsonText) {
+        throw new Error("No translation analysis generated");
+      }
+
+      return JSON.parse(jsonText);
+    } catch (error) {
+      console.error("Error generating detailed translation:", error);
+      throw new Error(`Failed to analyze translation: ${error}`);
+    }
+  }
+
+  async checkAnswerDetailed(
+    userAnswer: string,
+    correctAnswer: string,
+    context: string,
+    mode: string,
+    config: Partial<GeminiConfig> = {}
+  ): Promise<{
+    whatsRight: string;
+    mainPointToImprove: string;
+    hint: string;
+  }> {
+    const modelConfig = { ...this.defaultConfig, ...config };
+    
+    const prompt = `You are a language learning tutor providing structured feedback.
+
+**Context:** ${context}
+**Mode:** ${mode}
+**Correct Answer:** "${correctAnswer}"
+**Student's Answer:** "${userAnswer}"
+
+Analyze the student's answer and provide structured guidance in exactly 3 parts:
+
+1. What's Right: Acknowledge what the student got correct (even if partially)
+2. Main Point to Improve: Identify the primary area that needs work
+3. Hint: Give a specific, actionable hint to help them improve
+
+Be encouraging and constructive. Focus on learning and progress.
+
+Return ONLY a JSON object with this structure:
+{
+  "whatsRight": "What the student got correct or was close to",
+  "mainPointToImprove": "Main area for improvement", 
+  "hint": "Specific hint to help them improve"
+}`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: modelConfig.model,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              whatsRight: { type: "string" },
+              mainPointToImprove: { type: "string" },
+              hint: { type: "string" }
+            },
+            required: ["whatsRight", "mainPointToImprove", "hint"]
+          }
+        }
+      });
+
+      const jsonText = response.text;
+      if (!jsonText) {
+        throw new Error("No detailed feedback generated");
+      }
+
+      return JSON.parse(jsonText);
+    } catch (error) {
+      console.error("Error generating detailed feedback:", error);
+      throw new Error(`Failed to generate detailed feedback: ${error}`);
+    }
+  }
 }
 
 export const geminiService = new GeminiService();
