@@ -157,8 +157,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         count || 5,
         config
       );
+
+      // Add word analysis to each content item
+      const enhancedContent = await Promise.all(
+        content.map(async (item: any) => {
+          try {
+            const wordAnalysis = await geminiService.analyzeWordsForLearning(
+              item.english,
+              item.target,
+              languageCode
+            );
+            return {
+              ...item,
+              wordMeanings: wordAnalysis.wordMeanings,
+              quickTip: wordAnalysis.quickTip
+            };
+          } catch (error) {
+            console.error('Word analysis error:', error);
+            return item; // Return original item if analysis fails
+          }
+        })
+      );
       
-      res.json(content);
+      res.json(enhancedContent);
     } catch (error) {
       console.error("Error generating content:", error);
       res.status(500).json({ message: "Failed to generate content" });

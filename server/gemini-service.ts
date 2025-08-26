@@ -378,6 +378,80 @@ Return ONLY a JSON object with this structure:
       throw new Error(`Failed to generate detailed feedback: ${error}`);
     }
   }
+
+  async analyzeWordsForLearning(
+    englishText: string,
+    targetText: string,
+    languageCode: string
+  ): Promise<{
+    wordMeanings?: Array<{
+      word: string;
+      meaning: string;
+      transliteration?: string;
+    }>;
+    quickTip?: string;
+  }> {
+    const prompt = `Analyze this language learning pair for word-by-word breakdown:
+
+English: "${englishText}"
+Target (${languageCode}): "${targetText}"
+
+Provide detailed word analysis for language learners:
+1. Break down the target language sentence word-by-word
+2. Explain each word's meaning in English
+3. Provide transliteration for non-Roman scripts
+4. Include a practical learning tip
+
+Return ONLY a JSON object with this structure:
+{
+  "wordMeanings": [
+    {
+      "word": "target language word",
+      "meaning": "English meaning",
+      "transliteration": "roman script (if applicable)"
+    }
+  ],
+  "quickTip": "Helpful learning tip about grammar, usage, or cultural context"
+}`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              wordMeanings: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    word: { type: "string" },
+                    meaning: { type: "string" },
+                    transliteration: { type: "string" }
+                  },
+                  required: ["word", "meaning"]
+                }
+              },
+              quickTip: { type: "string" }
+            }
+          }
+        }
+      });
+
+      const jsonText = response.text;
+      if (!jsonText) {
+        return {};
+      }
+
+      return JSON.parse(jsonText);
+    } catch (error) {
+      console.error("Error analyzing words for learning:", error);
+      return {};
+    }
+  }
 }
 
 export const geminiService = new GeminiService();
