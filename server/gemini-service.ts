@@ -37,23 +37,48 @@ export class GeminiService {
     const regionContext = this.getRegionContext(languageCode, region);
     const levelDescription = this.getLevelDescription(level);
     
+    const themes = [
+      "Transportation (autos, metro, buses, cabs, booking rides)",
+      "Food & Dining (restaurants, street food, ordering, paying bills)", 
+      "Shopping (markets, stores, bargaining, asking for items, prices)",
+      "Daily Life & Home (chores, talking to family, neighbors, landlords)",
+      "Work & Office (meetings, colleagues, deadlines, small talk)",
+      "Socializing (making plans with friends, invitations, compliments)",
+      "Services (plumbers, electricians, deliveries, appointments)",
+      "Health & Wellness (doctor appointments, pharmacy, describing symptoms)",
+      "Navigating the City (asking for directions, landmarks, traffic)",
+      "Government Services (Aadhaar, PAN card, passport applications)",
+      "Utility Services (electricity, water bills, internet, mobile recharge)",
+      "Civic Issues (reporting problems, municipality complaints)",
+      "Banking & Finance (ATM, account opening, loan inquiries)",
+      "Education (school admissions, fees, talking to teachers)",
+      "Real Estate (house hunting, rent negotiations, maintenance)",
+      "Entertainment (movie tickets, events, cultural programs)",
+      "Emergency Situations (police, fire, medical emergencies)",
+      "Religious & Cultural (festivals, temple visits, customs)",
+      "Technology (mobile issues, internet problems, app usage)",
+      "Personal Care (salon, spa, beauty treatments)"
+    ];
+    
+    const selectedThemes = themes.sort(() => 0.5 - Math.random()).slice(0, Math.min(count, themes.length));
+    
     const prompt = `You are a language learning content generator creating practical, real-world sentences for learners.
 
 **Context:** 
 - Language: ${languageName} (${languageCode})
 - Region: ${region}
 - Level: ${levelDescription}
-- Category: ${category}
 - Regional Context: ${regionContext}
 
-**Task:** Generate ${count} practical, everyday sentences that would be useful for someone living or working in ${region}. Each sentence should be culturally relevant and contextually appropriate.
+**Task:** Generate ${count} practical, everyday sentences covering these diverse themes: ${selectedThemes.join(', ')}. Each sentence should be culturally relevant and contextually appropriate for someone living in ${region}.
 
 **Requirements:**
 1. Create sentences that locals actually use in daily situations
 2. Include regional variations and cultural nuances specific to ${region}
 3. Make them practical for real-world interactions
 4. Ensure appropriate complexity for ${level} level learners
-5. Focus on the category: ${category}
+5. Cover different themes - don't repeat the same scenario
+6. Use authentic local expressions and phrases
 
 **Output Format:** Return ONLY a JSON array of objects with this exact structure:
 [
@@ -65,7 +90,7 @@ export class GeminiService {
   }
 ]
 
-Make sure the sentences are authentic to ${region} and would help learners communicate effectively with locals.`;
+Make sure the sentences are authentic to ${region} and would help learners communicate effectively with locals across various real-life situations.`;
 
     try {
       const response = await this.ai.models.generateContent({
@@ -391,27 +416,24 @@ Return ONLY a JSON object with this structure:
     }>;
     quickTip?: string;
   }> {
-    const prompt = `Analyze this language learning pair:
+    const prompt = `Analyze: "${englishText}" = "${targetText}"
 
-English: "${englishText}"
-Target (${languageCode}): "${targetText}"
+Provide word meanings and one simple usage tip.
 
-Provide:
-1. Word-by-word breakdown with meanings and transliteration
-2. One practical usage tip about a word or pattern from the sentence
+For quickTip: Give ONE practical example of how to use a word from this sentence in a different situation. Keep it simple and use only Roman script with **bold** for transliterated words. No technical terms.
 
-For the "quickTip" value, provide one practical usage tip about a word or pattern from the sentence. Explain the pattern in simple terms and give another example of how the user could use this pattern. **Strictly avoid technical grammar terms** like 'participle', 'allomorph', 'dative case', etc. In this "quickTip" section, you **MUST NOT** use ${languageCode === 'kn' ? 'Kannada' : 'Hindi'} script. Only use the transliterated Roman script and make sure to wrap any transliterated words in **bold** markdown.
+Example tip format: "The word **namaste** means hello. You can also say **namaste sir** when meeting elders or **namaste madam** for women."
 
-Return ONLY a JSON object:
+JSON format:
 {
   "wordMeanings": [
     {
-      "word": "target language word",
-      "meaning": "English meaning", 
+      "word": "target word",
+      "meaning": "English meaning",
       "transliteration": "roman script"
     }
   ],
-  "quickTip": "A practical tip about using a word or pattern, with examples, using only Roman script with **bold** for transliterated words"
+  "quickTip": "Simple practical tip with examples using **bold** for transliterated words"
 }`;
 
     try {
