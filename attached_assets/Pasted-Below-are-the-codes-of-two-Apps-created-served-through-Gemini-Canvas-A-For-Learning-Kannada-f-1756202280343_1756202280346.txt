@@ -1,0 +1,2766 @@
+Below are the codes of two Apps created & served through Gemini Canvas
+
+A) For Learning Kannada (for people from outside Karnataka but living/working in Karnataka. The app will help them to understand & interact with local people in Karnataka)
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Kannada Kali, Simply</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+
+        html, body {
+
+            height: 100%;
+
+            overflow: hidden;
+
+            font-family: 'Inter', sans-serif;
+
+        }
+
+        .card {
+
+            background-color: white;
+
+            border-radius: 1rem;
+
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+            height: 100dvh;
+
+            display: grid;
+
+            grid-template-rows: auto 1fr auto;
+
+            overflow: hidden;
+
+        }
+
+        .scrollable-content {
+
+            overflow-y: auto;
+
+            min-height: 0;
+
+        }
+
+        /* UI CHANGE: Custom scrollbar styles for better visibility */
+
+        .scrollable-content::-webkit-scrollbar {
+
+            width: 16px;
+
+        }
+
+        .scrollable-content::-webkit-scrollbar-track {
+
+            background: #e2e8f0;
+
+            border-radius: 10px;
+
+        }
+
+        .scrollable-content::-webkit-scrollbar-thumb {
+
+            background: #9ca3af;
+
+            border-radius: 10px;
+
+            border: 4px solid white;
+
+        }
+
+        .scrollable-content::-webkit-scrollbar-thumb:hover {
+
+            background: #6b7280;
+
+        }
+
+        /* Firefox scrollbar styles */
+
+        .scrollable-content {
+
+          scrollbar-width: thick;
+
+          scrollbar-color: #9ca3af #e2e8f0;
+
+        }
+
+        .btn {
+
+            transition: background-color 0.3s ease, transform 0.2s ease;
+
+        }
+
+        .btn:hover:not(:disabled) {
+
+            transform: translateY(-2px);
+
+        }
+
+        .btn:disabled {
+
+            cursor: not-allowed;
+
+            opacity: 0.5;
+
+        }
+
+        #loader, .phrase-loader, #feedback-loader, #explanation-loader, #translate-loader {
+
+            border: 4px solid #f3f3f3;
+
+            border-top: 4px solid #4f46e5;
+
+            border-radius: 50%;
+
+            width: 40px;
+
+            height: 40px;
+
+            animation: spin 1s linear infinite;
+
+        }
+
+        .spinner-inline {
+
+            border: 2px solid #f3f3f3;
+
+            border-top: 2px solid white;
+
+            border-radius: 50%;
+
+            width: 16px;
+
+            height: 16px;
+
+            animation: spin 1s linear infinite;
+
+            display: inline-block;
+
+        }
+
+        @keyframes spin {
+
+            0% { transform: rotate(0deg); }
+
+            100% { transform: rotate(360deg); }
+
+        }
+
+        .tab {
+
+            cursor: pointer;
+
+            padding: 0.25rem 0.75rem;
+
+            border-radius: 0.5rem;
+
+            transition: all 0.3s ease;
+
+            font-weight: 600;
+
+            background-color: #f3f4f6;
+
+            color: #4b5563;
+
+        }
+
+        .tab.active {
+
+            background-color: #eef2ff;
+
+            color: #4f46e5;
+
+        }
+
+        .level-btn, .app-mode-btn {
+
+            flex: 1;
+
+            padding: 0.25rem;
+
+            border-radius: 0.5rem;
+
+            font-weight: 500;
+
+            transition: all 0.3s ease;
+
+            border: 1px solid transparent;
+
+        }
+
+        .app-mode-btn.active {
+
+            background-color: #4f46e5;
+
+            color: white;
+
+            font-weight: 700;
+
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+        }
+
+        .level-btn.active {
+
+            background-color: white;
+
+            color: #4f46e5;
+
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+            border-color: #e5e7eb;
+
+        }
+
+        .mic-btn {
+
+            position: absolute;
+
+            right: 0.75rem;
+
+            top: 50%;
+
+            transform: translateY(-50%);
+
+            color: #6b7280;
+
+        }
+
+        .mic-btn:hover {
+
+            color: #4f46e5;
+
+        }
+
+        .mic-btn.listening {
+
+            color: #ef4444;
+
+        }
+
+        .feedback-container ul, .answer-explanation ul {
+
+            list-style-type: disc;
+
+            padding-left: 20px;
+
+            margin-top: 0.5rem;
+
+        }
+
+    </style>
+
+</head>
+
+<body class="bg-gray-100 p-2 sm:p-4">
+
+
+
+    <div id="main-card" class="card w-full max-w-2xl mx-auto text-center">
+
+        <!-- Header Section -->
+
+        <div id="header-section" class="p-2 sm:p-4 pb-0 flex-shrink-0">
+
+            <h1 class="text-lg md:text-xl font-bold text-gray-800">Simply Kannada Kali</h1>
+
+            <p class="text-xs text-gray-500 mb-2 italic">No more "Kannada Gottilla"!</p>
+
+           
+
+            <div class="flex justify-center bg-gray-100 p-1 rounded-lg my-2 max-w-md mx-auto">
+
+                <button id="app-mode-learn" class="app-mode-btn active text-xs sm:text-sm" onclick="switchAppMode('learn')">Learn with Examples</button>
+
+                <button id="app-mode-translate" class="app-mode-btn text-xs sm:text-sm" onclick="switchAppMode('translate')">Just Translate (A → ಅ)</button>
+
+            </div>
+
+
+
+            <div id="learning-controls">
+
+                <div class="flex justify-center bg-gray-100 p-1 rounded-lg mb-2 max-w-xs mx-auto">
+
+                    <button id="level-basic" class="level-btn active text-xs" onclick="switchLevel('basic')">Basic</button>
+
+                    <button id="level-intermediate" class="level-btn text-xs" onclick="switchLevel('intermediate')">Intermediate</button>
+
+                </div>
+
+
+
+                <div class="flex justify-around items-center border-b border-gray-200 pb-1 mb-1">
+
+                    <div class="flex flex-col items-center">
+
+                        <h2 class="text-xs font-semibold text-gray-700 mb-1">Lazy Listen</h2>
+
+                        <div id="tab-listen" class="tab active text-sm" onclick="switchMode('listen')">(A → ಅ)</div>
+
+                    </div>
+
+                    <div class="border-l border-gray-200 self-stretch mx-2"></div>
+
+                    <div class="flex flex-col items-center">
+
+                        <h2 class="text-xs font-semibold text-gray-700 mb-1">Guided Workout</h2>
+
+                        <div class="flex gap-x-2 md:gap-x-4">
+
+                            <div id="tab-guide" class="tab text-sm" onclick="switchMode('guide')">(ಅ → A)</div>
+
+                            <div id="tab-speak" class="tab text-sm" onclick="switchMode('speak')">(A → ಅ)</div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+       
+
+        <!-- Main Content (Scrollable Area) -->
+
+        <div id="scrollable-content" class="scrollable-content px-4 sm:px-6">
+
+            <div id="error-message" class="text-red-500 my-4 hidden"></div>
+
+            <audio id="audio-player" class="hidden"></audio>
+
+
+
+            <!-- Learning Section -->
+
+            <div id="learn-section">
+
+                <!-- Simply Listen Mode -->
+
+                <div id="simply-listen-mode">
+
+                    <div class="bg-gray-50 p-3 sm:p-4 rounded-lg mb-4 min-h-[140px] flex flex-col justify-center relative">
+
+                        <div id="phrase-loader-listen" class="phrase-loader mx-auto my-4 hidden"></div>
+
+                        <div id="phrase-content-listen">
+
+                            <p id="category-listen" class="text-xs font-semibold text-indigo-600 uppercase mb-1">Category</p>
+
+                            <p id="english-sentence-listen" class="text-sm text-gray-700 mb-2">English Sentence</p>
+
+                            <p id="kannada-sentence-listen" class="text-sm font-normal text-gray-800">ಕನ್ನಡ ವಾಕ್ಯ</p>
+
+                            <div id="transliteration-listen" class="flex items-center justify-center mt-1"></div>
+
+                        </div>
+
+                    </div>
+
+                    <div id="listen-explanation-container" class="my-4"></div>
+
+                </div>
+
+
+
+                <!-- Listen & Guide Mode (Kan -> Eng) -->
+
+                <div id="listen-guide-mode" class="hidden">
+
+                    <div class="bg-gray-50 p-3 sm:p-4 rounded-lg mb-4 min-h-[100px] flex flex-col justify-center relative">
+
+                        <div id="phrase-loader-guide" class="phrase-loader mx-auto my-4 hidden"></div>
+
+                        <div id="phrase-content-guide">
+
+                            <p id="category-guide" class="text-xs font-semibold text-indigo-600 uppercase mb-1">Category</p>
+
+                            <p id="kannada-sentence-guide" class="text-sm font-normal text-gray-800">ಕನ್ನಡ ವಾಕ್ಯ</p>
+
+                            <div id="transliteration-guide" class="flex items-center justify-center mt-1"></div>
+
+                        </div>
+
+                    </div>
+
+                    <p class="text-gray-600 mb-2 text-sm">What does this mean in English?</p>
+
+                    <div class="relative w-full mb-4">
+
+                        <textarea id="user-translation-guide" class="w-full p-2 pr-12 border border-gray-300 rounded-lg" rows="2" placeholder="Type or click the mic to speak..."></textarea>
+
+                        <button id="mic-btn-guide" class="mic-btn" title="Speak your translation">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+
+                        </button>
+
+                    </div>
+
+                    <p id="listening-status-guide" class="text-sm text-red-500 mb-2 hidden">Listening...</p>
+
+                    <div id="feedback-container-guide" class="feedback-container bg-blue-50 p-4 rounded-lg my-4 text-left hidden"></div>
+
+                    <div id="guide-answer-container" class="hidden my-4"></div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center"><button id="check-answer-btn-guide" class="btn bg-green-600 text-white font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-green-700">Check Answer</button><button id="reveal-answer-btn-guide" class="btn bg-yellow-500 text-white font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-yellow-600">Reveal Answer</button></div>
+
+                </div>
+
+
+
+                <!-- Speak & Guide Mode (Eng -> Kan) -->
+
+                <div id="speak-guide-mode" class="hidden">
+
+                     <div class="bg-gray-50 p-3 sm:p-4 rounded-lg mb-4 min-h-[100px] flex flex-col justify-center relative">
+
+                        <div id="phrase-loader-speak" class="phrase-loader mx-auto my-4 hidden"></div>
+
+                        <div id="phrase-content-speak">
+
+                            <p id="category-speak" class="text-xs font-semibold text-indigo-600 uppercase mb-1">Category</p>
+
+                            <p id="english-sentence-speak" class="text-lg sm:text-xl font-semibold text-gray-900">English Sentence</p>
+
+                        </div>
+
+                    </div>
+
+                    <p class="text-gray-600 mb-2 text-sm">How do you say this in Kannada?</p>
+
+                    <div class="relative w-full mb-4">
+
+                        <textarea id="user-translation-speak" class="w-full p-2 pr-12 border border-gray-300 rounded-lg" rows="2" placeholder="Type or click the mic to speak..."></textarea>
+
+                        <button id="mic-btn-speak" class="mic-btn" title="Speak your translation">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+
+                        </button>
+
+                    </div>
+
+                    <p id="listening-status-speak" class="text-sm text-red-500 mb-2 hidden">Listening...</p>
+
+                    <div id="feedback-container-speak" class="feedback-container bg-blue-50 p-4 rounded-lg my-4 text-left hidden"></div>
+
+                    <div id="speak-answer-container" class="hidden my-4"></div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center"><button id="check-answer-btn-speak" class="btn bg-green-600 text-white font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-green-700">Check Answer</button><button id="reveal-answer-btn-speak" class="btn bg-yellow-500 text-white font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-yellow-600">Reveal Answer</button></div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- Translate Section -->
+
+            <div id="translate-section" class="hidden">
+
+                <p class="text-gray-600 mb-2">Enter English text to translate into Kannada.</p>
+
+                <div class="relative w-full mb-4">
+
+                    <textarea id="translate-input" class="w-full p-2 pr-12 border border-gray-300 rounded-lg" rows="3" placeholder="Type or click the mic to speak..."></textarea>
+
+                    <button id="mic-btn-translate" class="mic-btn" title="Speak English text">
+
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+
+                    </button>
+
+                </div>
+
+                <p id="listening-status-translate" class="text-sm text-red-500 mb-2 hidden">Listening...</p>
+
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+
+                    <button id="translate-btn" class="btn bg-blue-600 text-white font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-blue-700 w-full">Translate</button>
+
+                    <button id="clear-translate-btn" class="btn bg-gray-200 text-gray-800 font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-gray-300 w-full">Clear</button>
+
+                </div>
+
+                <div id="translate-output-container" class="hidden mt-4 bg-gray-50 p-4 rounded-lg text-left">
+
+                    <div id="translate-loader" class="mx-auto my-4 hidden"></div>
+
+                    <div id="translate-output">
+
+                        <p class="text-lg font-normal text-gray-800" id="kannada-translation"></p>
+
+                        <div class="flex items-center justify-start mt-1" id="transliteration-translation"></div>
+
+                    </div>
+
+                </div>
+
+                <div id="translate-explanation-container" class="my-4"></div>
+
+            </div>
+
+        </div>
+
+       
+
+        <!-- Footer Section -->
+
+        <div id="footer-section" class="p-4 sm:p-6 pt-0 flex-shrink-0">
+
+            <div id="loader" class="mx-auto my-4 hidden"></div>
+
+            <div id="footer-buttons" class="flex flex-col sm:flex-row gap-4 justify-center mt-4">
+
+                <button id="next-phrase-btn" class="btn border border-blue-600 text-blue-600 font-semibold py-2 px-4 text-sm rounded-lg shadow-sm hover:bg-blue-50">
+
+                    Next Sentence
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <script>
+
+        // --- State ---
+
+        let appMode = 'learn';
+
+        let currentMode = 'listen';
+
+        let currentLevel = 'basic';
+
+        let correctEnglishAnswer = '';
+
+        let correctKannadaAnswer = '';
+
+        let correctTransliteration = '';
+
+        let recognition;
+
+        let attemptHistory = [];
+
+
+
+        // --- DOM Elements ---
+
+        const mainCard = document.getElementById('main-card');
+
+        const headerSection = document.getElementById('header-section');
+
+        const scrollableContent = document.getElementById('scrollable-content');
+
+        const footerSection = document.getElementById('footer-section');
+
+        const nextPhraseBtn = document.getElementById('next-phrase-btn');
+
+        const audioPlayer = document.getElementById('audio-player');
+
+        const loader = document.getElementById('loader');
+
+        const errorMessage = document.getElementById('error-message');
+
+       
+
+        const learningControls = document.getElementById('learning-controls');
+
+        const learnSection = document.getElementById('learn-section');
+
+        const translateSection = document.getElementById('translate-section');
+
+        const footerButtons = document.getElementById('footer-buttons');
+
+
+
+        const translateInput = document.getElementById('translate-input');
+
+        const translateBtn = document.getElementById('translate-btn');
+
+        const clearTranslateBtn = document.getElementById('clear-translate-btn');
+
+        const translateOutputContainer = document.getElementById('translate-output-container');
+
+        const translateLoader = document.getElementById('translate-loader');
+
+        const translateOutput = document.getElementById('translate-output');
+
+        const kannadaTranslationEl = document.getElementById('kannada-translation');
+
+        const transliterationTranslationEl = document.getElementById('transliteration-translation');
+
+        const micBtnTranslate = document.getElementById('mic-btn-translate');
+
+        const listeningStatusTranslate = document.getElementById('listening-status-translate');
+
+        const translateExplanationContainer = document.getElementById('translate-explanation-container');
+
+       
+
+        const modes = {
+
+            listen: {
+
+                el: document.getElementById('simply-listen-mode'),
+
+                loader: document.getElementById('phrase-loader-listen'),
+
+                content: document.getElementById('phrase-content-listen'),
+
+                category: document.getElementById('category-listen'),
+
+                english: document.getElementById('english-sentence-listen'),
+
+                kannada: document.getElementById('kannada-sentence-listen'),
+
+                transliteration: document.getElementById('transliteration-listen'),
+
+                explanationContainer: document.getElementById('listen-explanation-container'),
+
+            },
+
+            guide: {
+
+                el: document.getElementById('listen-guide-mode'),
+
+                loader: document.getElementById('phrase-loader-guide'),
+
+                content: document.getElementById('phrase-content-guide'),
+
+                category: document.getElementById('category-guide'),
+
+                kannada: document.getElementById('kannada-sentence-guide'),
+
+                transliteration: document.getElementById('transliteration-guide'),
+
+                answerContainer: document.getElementById('guide-answer-container'),
+
+                input: document.getElementById('user-translation-guide'),
+
+                micBtn: document.getElementById('mic-btn-guide'),
+
+                listeningStatus: document.getElementById('listening-status-guide'),
+
+                feedbackContainer: document.getElementById('feedback-container-guide'),
+
+                checkBtn: document.getElementById('check-answer-btn-guide'),
+
+                revealBtn: document.getElementById('reveal-answer-btn-guide'),
+
+            },
+
+            speak: {
+
+                el: document.getElementById('speak-guide-mode'),
+
+                loader: document.getElementById('phrase-loader-speak'),
+
+                content: document.getElementById('phrase-content-speak'),
+
+                category: document.getElementById('category-speak'),
+
+                english: document.getElementById('english-sentence-speak'),
+
+                answerContainer: document.getElementById('speak-answer-container'),
+
+                input: document.getElementById('user-translation-speak'),
+
+                micBtn: document.getElementById('mic-btn-speak'),
+
+                listeningStatus: document.getElementById('listening-status-speak'),
+
+                feedbackContainer: document.getElementById('feedback-container-speak'),
+
+                checkBtn: document.getElementById('check-answer-btn-speak'),
+
+                revealBtn: document.getElementById('reveal-answer-btn-speak'),
+
+            }
+
+        };
+
+
+
+        const themes = [
+
+            "Transportation (autos, metro, buses, cabs)",
+
+            "Food & Dining (restaurants, street food, ordering, paying)",
+
+            "Shopping (markets, stores, bargaining, asking for items)",
+
+            "Daily Life & Home (chores, talking to family, neighbors, landlords)",
+
+            "Work & Office (meetings, colleagues, deadlines, small talk)",
+
+            "Socializing (making plans with friends, invitations, compliments)",
+
+            "Services (plumbers, electricians, deliveries, appointments)",
+
+            "Health & Wellness (doctor's appointments, pharmacy, describing symptoms)",
+
+            "Navigating the City (asking for directions, landmarks, traffic)",
+
+            "Applying for a government document (Aadhaar, PAN card)",
+
+            "Paying a utility bill (electricity, water) at a government office",
+
+            "Reporting a civic issue (pothole, garbage) to the municipality",
+
+            "Inquiring about property tax at the panchayat office"
+
+        ];
+
+
+
+        function adjustLayout() {
+
+            const vh = window.innerHeight;
+
+            mainCard.style.height = `${vh}px`;
+
+            setTimeout(() => {
+
+                const headerHeight = headerSection.offsetHeight;
+
+                const footerHeight = footerSection.offsetHeight;
+
+                const contentHeight = vh - headerHeight - footerHeight;
+
+                scrollableContent.style.height = `${contentHeight}px`;
+
+            }, 100);
+
+        }
+
+
+
+        async function transliterateKannadaToRoman(kannadaText) {
+
+            const modeUI = modes.speak;
+
+            modeUI.input.placeholder = "Transliterating...";
+
+            modeUI.input.disabled = true;
+
+            const prompt = `Transliterate the following Kannada text to a simple Roman script (English letters). Return ONLY the transliterated text, with no extra words, formatting, or markdown. For example, for 'ಶುಭೋದಯ' return 'Shubhodaya'. Text to transliterate: "${kannadaText}"`;
+
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+
+            const apiKey = "";
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            try {
+
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+                const result = await response.json();
+
+                const transliteratedText = result?.candidates?.[0]?.content?.parts?.[0]?.text.trim() || kannadaText;
+
+                return transliteratedText.replace(/\*\*/g, '').replace(/The transliteration of ".*" is:\s*/i, '');
+
+            } catch (error) {
+
+                console.error("Transliteration failed:", error);
+
+                return kannadaText;
+
+            } finally {
+
+                modeUI.input.placeholder = "Type or click the mic to speak...";
+
+                modeUI.input.disabled = false;
+
+            }
+
+        }
+
+
+
+        function setupSpeechRecognition() {
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (SpeechRecognition) {
+
+                recognition = new SpeechRecognition();
+
+                recognition.continuous = false;
+
+                recognition.interimResults = false;
+
+                recognition.maxAlternatives = 1;
+
+                recognition.onresult = async (event) => {
+
+                    let speechResult = event.results[0][0].transcript;
+
+                    if (appMode === 'learn' && currentMode === 'speak') {
+
+                        speechResult = await transliterateKannadaToRoman(speechResult);
+
+                        modes.speak.input.value = speechResult;
+
+                    } else if (appMode === 'translate') {
+
+                        translateInput.value = speechResult;
+
+                    } else {
+
+                        modes.guide.input.value = speechResult;
+
+                    }
+
+                };
+
+                recognition.onspeechend = () => {
+
+                    recognition.stop();
+
+                    if(appMode === 'learn') {
+
+                        modes[currentMode].listeningStatus.classList.add('hidden');
+
+                        modes[currentMode].micBtn.classList.remove('listening');
+
+                    } else {
+
+                        listeningStatusTranslate.classList.add('hidden');
+
+                        micBtnTranslate.classList.remove('listening');
+
+                    }
+
+                };
+
+                recognition.onerror = (event) => {
+
+                    showError(`Speech recognition error: ${event.error}`);
+
+                     if(appMode === 'learn') {
+
+                        modes[currentMode].listeningStatus.classList.add('hidden');
+
+                        modes[currentMode].micBtn.classList.remove('listening');
+
+                    } else {
+
+                        listeningStatusTranslate.classList.add('hidden');
+
+                        micBtnTranslate.classList.remove('listening');
+
+                    }
+
+                };
+
+            } else {
+
+                document.querySelectorAll('.mic-btn').forEach(btn => btn.style.display = 'none');
+
+                showError("Speech recognition is not supported in this browser.");
+
+            }
+
+        }
+
+       
+
+        function handleMicClick() {
+
+            if (recognition) {
+
+                const modeUI = modes[currentMode];
+
+                modeUI.input.value = '';
+
+                if (modeUI.feedbackContainer) modeUI.feedbackContainer.classList.add('hidden');
+
+                recognition.lang = currentMode === 'guide' ? 'en-US' : 'kn-IN';
+
+                recognition.start();
+
+                modeUI.listeningStatus.classList.remove('hidden');
+
+                modeUI.micBtn.classList.add('listening');
+
+            }
+
+        }
+
+
+
+        function switchLevel(level) {
+
+            setPhraseLoading(true);
+
+            currentLevel = level;
+
+            document.getElementById('level-basic').classList.toggle('active', level === 'basic');
+
+            document.getElementById('level-intermediate').classList.toggle('active', level === 'intermediate');
+
+            generateNewPhrase();
+
+        }
+
+
+
+        function switchMode(mode) {
+
+            setPhraseLoading(true);
+
+            currentMode = mode;
+
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+            document.getElementById(`tab-${mode}`).classList.add('active');
+
+            Object.values(modes).forEach(m => { if(m.el) m.el.classList.add('hidden')});
+
+            modes[mode].el.classList.remove('hidden');
+
+            generateNewPhrase();
+
+        }
+
+       
+
+        function switchAppMode(mode) {
+
+            appMode = mode;
+
+            document.getElementById('app-mode-learn').classList.toggle('active', mode === 'learn');
+
+            document.getElementById('app-mode-translate').classList.toggle('active', mode === 'translate');
+
+
+
+            learningControls.classList.toggle('hidden', mode !== 'learn');
+
+            learnSection.classList.toggle('hidden', mode !== 'learn');
+
+            translateSection.classList.toggle('hidden', mode === 'learn');
+
+
+
+            if (mode === 'learn') {
+
+                footerButtons.classList.remove('hidden');
+
+                generateNewPhrase();
+
+            } else {
+
+                footerButtons.classList.add('hidden');
+
+            }
+
+            adjustLayout();
+
+        }
+
+       
+
+        function displayPhrase(phrase) {
+
+            correctEnglishAnswer = phrase.english;
+
+            correctKannadaAnswer = phrase.kannada;
+
+            correctTransliteration = phrase.transliteration;
+
+            Object.values(modes).forEach(m => { if(m.category) m.category.textContent = phrase.category; });
+
+            modes.listen.english.textContent = phrase.english;
+
+            modes.listen.kannada.textContent = phrase.kannada;
+
+            modes.listen.transliteration.innerHTML = `<span class="text-lg sm:text-xl font-bold text-gray-900">${phrase.transliteration}</span><button onclick="handlePronounce('${phrase.kannada}', this)" class="btn bg-green-600 text-white text-xs py-1 px-2 rounded-md ml-2">Pronounce</button>`;
+
+            modes.guide.kannada.textContent = phrase.kannada;
+
+            modes.guide.transliteration.innerHTML = `<span class="text-lg sm:text-xl font-bold text-gray-900">${phrase.transliteration}</span><button onclick="handlePronounce('${phrase.kannada}', this)" class="btn bg-green-600 text-white text-xs py-1 px-2 rounded-md ml-2">Pronounce</button>`;
+
+            modes.speak.english.textContent = phrase.english;
+
+        }
+
+       
+
+        function setAudioLoading(isLoading, btnEl = null) {
+
+            if (btnEl) {
+
+                if (isLoading) {
+
+                    btnEl.disabled = true;
+
+                    btnEl.innerHTML = '<div class="spinner-inline mx-auto"></div>';
+
+                } else {
+
+                    btnEl.disabled = false;
+
+                    btnEl.innerHTML = 'Pronounce';
+
+                }
+
+            }
+
+        }
+
+
+
+        function setPhraseLoading(isLoading) {
+
+            document.querySelectorAll('.phrase-loader').forEach(loader => {
+
+                loader.classList.toggle('hidden', !isLoading);
+
+            });
+
+            document.querySelectorAll('[id^="phrase-content-"]').forEach(content => {
+
+                content.classList.toggle('hidden', isLoading);
+
+            });
+
+            nextPhraseBtn.disabled = isLoading;
+
+           
+
+            if (isLoading) {
+
+                Object.values(modes).forEach(modeUI => {
+
+                    if (modeUI.explanationContainer) {
+
+                        modeUI.explanationContainer.classList.add('hidden');
+
+                        modeUI.explanationContainer.innerHTML = '';
+
+                    }
+
+                    if (modeUI.answerContainer) {
+
+                        modeUI.answerContainer.classList.add('hidden');
+
+                        modeUI.answerContainer.innerHTML = '';
+
+                    }
+
+                    if (modeUI.feedbackContainer) {
+
+                        modeUI.feedbackContainer.classList.add('hidden');
+
+                        modeUI.feedbackContainer.innerHTML = '';
+
+                    }
+
+                    if (modeUI.input) {
+
+                        modeUI.input.value = '';
+
+                    }
+
+                });
+
+            }
+
+        }
+
+
+
+        function showError(message) {
+
+            errorMessage.textContent = message;
+
+            errorMessage.classList.remove('hidden');
+
+            setTimeout(() => { errorMessage.classList.add('hidden'); }, 4000);
+
+        }
+
+
+
+        function renderMarkdown(text) {
+
+            let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+            if (html.includes('* ')) {
+
+                const listItems = html.split('* ').slice(1);
+
+                html = '<ul>' + listItems.map(item => `<li class="ml-4">${item.trim()}</li>`).join('') + '</ul>';
+
+            }
+
+            return html;
+
+        }
+
+
+
+        async function generateNewPhrase() {
+
+            setPhraseLoading(true);
+
+            showError('');
+
+            attemptHistory = [];
+
+
+
+            const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+
+            const lengthConstraint = currentLevel === 'basic' ? 'that is simple and less than 6 words long' : 'that is of intermediate complexity and between 6 and 15 words long';
+
+            const prompt = `You are generating sentences for a Kannada learning app. Your goal is to create a unique, practical, daily-use English sentence and its Kannada translation.
+
+
+
+1.  **Theme:** "${randomTheme}"
+
+2.  **Your Task:** Based on this theme, invent a *specific, everyday scenario* that might happen in Bengaluru, India.
+
+3.  **Sentence:** Create a sentence that fits the specific scenario you invented. The sentence should be ${lengthConstraint}.
+
+
+
+Provide the Kannada transliteration. Return ONLY the JSON object with "category", "english", "kannada", and "transliteration" keys. For the "category" key, use the specific scenario you invented.`;
+
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "category": { "type": "STRING" }, "english": { "type": "STRING" }, "kannada": { "type": "STRING" }, "transliteration": { "type": "STRING" } }, required: ["category", "english", "kannada", "transliteration"] } } };
+
+            const apiKey = "";
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            try {
+
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+                const result = await response.json();
+
+                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (jsonText) {
+
+                    displayPhrase(JSON.parse(jsonText));
+
+                    if (currentMode === 'listen') {
+
+                        handleExplainListen();
+
+                    }
+
+                } else { throw new Error("Invalid JSON data."); }
+
+            } catch (error) {
+
+                console.error("Failed to generate new phrase:", error);
+
+                showError("Could not generate a new phrase. Please try again.");
+
+                displayPhrase({ category: 'Error', english: 'Failed to load new phrase.', kannada: 'ದೋಷ', transliteration: 'Dōṣa' });
+
+            } finally {
+
+                setPhraseLoading(false);
+
+            }
+
+        }
+
+
+
+        async function checkAnswer() {
+
+            const modeUI = modes[currentMode];
+
+            const userAnswer = modeUI.input.value.trim();
+
+            if (!userAnswer) {
+
+                showError("Please enter your translation.");
+
+                return;
+
+            }
+
+            modeUI.feedbackContainer.classList.remove('hidden');
+
+            modeUI.feedbackContainer.innerHTML = '<div id="feedback-loader" class="mx-auto my-4"></div>';
+
+            modeUI.checkBtn.disabled = true;
+
+
+
+            const previousAttemptsText = attemptHistory.length > 0 ? `The student's previous incorrect attempts for this sentence were: "${attemptHistory.join('", "')}".` : "This is the student's first attempt.";
+
+           
+
+            let prompt;
+
+            if (currentMode === 'guide') {
+
+                prompt = `You are a friendly Kannada language tutor. YOUR ENTIRE RESPONSE MUST BE IN ENGLISH. UNDER NO CIRCUMSTANCES SHOULD YOU USE ANY KANNADA SCRIPT (e.g., ಕನ್ನಡ). When you reference a Kannada word, you MUST use the format: '**transliteration**'.
+
+                **Kannada Sentence:** "${correctKannadaAnswer}" (transliterated as "${correctTransliteration}")
+
+                **Correct English Translation:** "${correctEnglishAnswer}"
+
+                **Student's CURRENT Attempt:** "${userAnswer}"
+
+                Analyze the attempt and respond with the following structure:
+
+                * Start with an encouraging opening remark.
+
+                * **What's Right:** Acknowledge any parts they got correct.
+
+                * **Main Point to Improve:** Clearly explain the main error in English.
+
+                * **Hint:** Provide a guiding question in English to help them self-correct.`;
+
+            } else {
+
+                prompt = `You are a friendly Kannada language tutor. YOUR ENTIRE RESPONSE MUST BE IN ENGLISH. UNDER NO CIRCUMSTANCES SHOULD YOU USE ANY KANNADA SCRIPT (e.g., ಕನ್ನಡ). When you reference a Kannada word, you MUST use the format: '**transliteration**'.
+
+                **English Sentence:** "${correctEnglishAnswer}"
+
+                **Correct Kannada Translation:** "${correctKannadaAnswer}" (transliterated as "${correctTransliteration}")
+
+                **Student's CURRENT Attempt:** "${userAnswer}"
+
+                Analyze the attempt and respond with the following structure:
+
+                * Start with an encouraging opening remark.
+
+                * **What's Right:** Acknowledge any parts they got correct.
+
+                * **Main Point to Improve:** Clearly explain the main error in English.
+
+                * **Hint:** Provide a guiding question in English to help them self-correct.`;
+
+            }
+
+           
+
+            attemptHistory.push(userAnswer);
+
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+
+            const apiKey = "";
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            try {
+
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+                const result = await response.json();
+
+                const hint = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (hint) { modeUI.feedbackContainer.innerHTML = `<h3 class="font-bold text-blue-800 mb-2">Guidance</h3><div class="text-blue-700 whitespace-pre-wrap text-left">${renderMarkdown(hint)}</div>`; } else { throw new Error("Could not get feedback."); }
+
+            } catch (error) {
+
+                console.error("Failed to get feedback:", error);
+
+                modeUI.feedbackContainer.innerHTML = `<h3 class="font-bold text-blue-800 mb-2">Guidance</h3><p>Sorry, I couldn't process that. Please try again.</p>`;
+
+            } finally {
+
+                modeUI.checkBtn.disabled = false;
+
+            }
+
+        }
+
+
+
+        async function getExplanation(forTranslate = false, sourceText = '') {
+
+            let prompt;
+
+            if (forTranslate) {
+
+                 prompt = `You are a Kannada language teacher. Your response MUST be a JSON object with two keys: "wordMeanings" and "quickTip".
+
+                **English Sentence:** "${sourceText}"
+
+                **Correct Kannada Translation:** "${correctKannadaAnswer}" (transliterated as "${correctTransliteration}")
+
+                For the "wordMeanings" value, provide a brief, easy-to-understand list of the most important words and their meanings using markdown, with each word on a new line starting with '* '. When referencing Kannada words, use the format: '**transliteration** (ಸ್ಕ್ರಿಪ್ಟ್)'.
+
+                For the "quickTip" value, provide one practical usage tip about a word or pattern from the sentence. Explain the pattern in simple terms and give another example of how the user could use this pattern. **Strictly avoid technical grammar terms** like 'participle', 'allomorph', 'dative case', etc. In this "quickTip" section, you **MUST NOT** use Kannada script. Only use the transliterated Roman script and make sure to wrap any transliterated words in **bold** markdown.`;
+
+            }
+
+            else if (currentMode === 'guide') {
+
+                prompt = `You are a Kannada language teacher. Your response MUST be a JSON object with two keys: "wordMeanings" and "quickTip".
+
+                **Kannada Sentence:** "${correctKannadaAnswer}"
+
+                **Correct English Translation:** "${correctEnglishAnswer}"
+
+                Provide a brief, easy-to-understand breakdown. For the "wordMeanings" value, provide a list of important words and their meanings, with each word on a new line starting with '* '. When referencing Kannada words, use the format: '**transliteration** (ಸ್ಕ್ರಿಪ್ಟ್)'.
+
+                For the "quickTip" value, provide one practical usage tip about a word or pattern from the sentence. Explain the pattern in simple terms and give another example of how the user could use this pattern. **Strictly avoid technical grammar terms** like 'participle', 'allomorph', 'dative case', etc. In this "quickTip" section, you **MUST NOT** use Kannada script. Only use the transliterated Roman script and make sure to wrap any transliterated words in **bold** markdown.`;
+
+            } else { // speak or listen mode
+
+                prompt = `You are a Kannada language teacher. Your response MUST be a JSON object with two keys: "wordMeanings" and "quickTip". Your explanation MUST be in English.
+
+                **English Sentence:** "${correctEnglishAnswer}"
+
+                **Correct Kannada Translation:** "${correctKannadaAnswer}" (transliterated as "${correctTransliteration}")
+
+                For the "wordMeanings" value, provide a brief list of important words and their meanings, using markdown with each word on a new line starting with '* '. When referencing Kannada words, use the format: '**transliteration** (ಸ್ಕ್ರಿಪ್ಟ್)'.
+
+                For the "quickTip" value, provide one practical usage tip about a word or pattern from the sentence. Explain the pattern in simple terms and give another example of how the user could use this pattern. **Strictly avoid technical grammar terms** like 'participle', 'allomorph', 'dative case', etc. In this "quickTip" section, you **MUST NOT** use Kannada script. Only use the transliterated Roman script and make sure to wrap any transliterated words in **bold** markdown.`;
+
+            }
+
+
+
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "wordMeanings": { "type": "STRING" }, "quickTip": { "type": "STRING" } }, required: ["wordMeanings", "quickTip"] } } };
+
+            const apiKey = "";
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            try {
+
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+                const result = await response.json();
+
+                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (jsonText) {
+
+                    return JSON.parse(jsonText);
+
+                } else {
+
+                    throw new Error("Invalid explanation data.")
+
+                }
+
+            } catch (error) {
+
+                console.error("Failed to get explanation:", error);
+
+                return { wordMeanings: "Sorry, couldn't load the explanation.", quickTip: "" };
+
+            }
+
+        }
+
+
+
+        async function revealAnswer() {
+
+            const modeUI = modes[currentMode];
+
+            modeUI.answerContainer.classList.remove('hidden');
+
+            modeUI.feedbackContainer.classList.add('hidden');
+
+
+
+            let answerHTML = '';
+
+            if (currentMode === 'guide') {
+
+                answerHTML = `<div class="bg-green-100 p-2 rounded-lg text-left"><h3 class="font-bold text-green-800 mb-2 text-sm">Correct Answer</h3><p class="text-base text-gray-700">${correctEnglishAnswer}</p></div>`;
+
+            } else {
+
+                answerHTML = `<div class="bg-green-100 p-2 rounded-lg text-left"><h3 class="font-bold text-green-800 mb-2 text-sm">Correct Answer</h3><p class="text-base font-normal text-gray-800">${correctKannadaAnswer}</p><div class="flex items-center justify-start mt-1"><span class="text-lg font-bold text-gray-900">${correctTransliteration}</span></div></div>`;
+
+            }
+
+            modeUI.answerContainer.innerHTML = answerHTML + '<div id="explanation-loader" class="mx-auto my-4"></div>';
+
+
+
+            const explanation = await getExplanation();
+
+           
+
+            let explanationHTML = `<div class="bg-green-50 border-t border-green-200 mt-2 p-4 rounded-lg text-left text-sm"><h3 class="font-bold text-green-800 mb-2">Word Meanings</h3>${renderMarkdown(explanation.wordMeanings)}</div>`;
+
+            if (explanation.quickTip) {
+
+                explanationHTML += `<div class="bg-green-50 border-t border-green-200 mt-2 p-4 rounded-lg text-left text-sm"><h3 class="font-bold text-green-800 mb-2">Quick Tip</h3>${renderMarkdown(explanation.quickTip)}</div>`;
+
+            }
+
+            modeUI.answerContainer.innerHTML = answerHTML + explanationHTML;
+
+           
+
+            if (currentMode === 'speak') {
+
+                const pronounceButton = document.createElement('button');
+
+                pronounceButton.textContent = 'Pronounce';
+
+                pronounceButton.className = 'btn bg-green-600 text-white text-xs py-1 px-2 rounded-md ml-2';
+
+                pronounceButton.onclick = (e) => handlePronounce(correctKannadaAnswer, e.currentTarget);
+
+                modeUI.answerContainer.querySelector('.flex').appendChild(pronounceButton);
+
+            }
+
+        }
+
+       
+
+        async function handleExplainListen() {
+
+            const modeUI = modes.listen;
+
+            modeUI.explanationContainer.innerHTML = '<div id="explanation-loader" class="mx-auto my-4"></div>';
+
+            modeUI.explanationContainer.classList.remove('hidden');
+
+            const explanation = await getExplanation();
+
+
+
+            let explanationHTML = `<div class="bg-gray-100 p-4 rounded-lg text-left text-sm"><h3 class="font-bold text-gray-800 mb-2">Word Meanings</h3>${renderMarkdown(explanation.wordMeanings)}</div>`;
+
+             if (explanation.quickTip) {
+
+                explanationHTML += `<div class="bg-gray-100 p-4 rounded-lg text-left text-sm mt-2"><h3 class="font-bold text-gray-800 mb-2">Quick Tip</h3>${renderMarkdown(explanation.quickTip)}</div>`;
+
+            }
+
+            modeUI.explanationContainer.innerHTML = explanationHTML;
+
+        }
+
+
+
+        async function handleTranslate() {
+
+            const textToTranslate = translateInput.value.trim();
+
+            if (!textToTranslate) {
+
+                showError("Please enter some English text to translate.");
+
+                return;
+
+            }
+
+            translateOutputContainer.classList.remove('hidden');
+
+            translateLoader.classList.remove('hidden');
+
+            translateOutput.classList.add('hidden');
+
+            translateBtn.disabled = true;
+
+            translateExplanationContainer.innerHTML = '';
+
+            translateExplanationContainer.classList.add('hidden');
+
+
+
+            const prompt = `Translate the following English sentence into Kannada. Provide both the Kannada script and a simple Roman script transliteration. Return ONLY a JSON object with "kannada" and "transliteration" keys. Sentence: "${textToTranslate}"`;
+
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "kannada": { "type": "STRING" }, "transliteration": { "type": "STRING" } }, required: ["kannada", "transliteration"] } } };
+
+            const apiKey = "";
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+
+
+            try {
+
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+                const result = await response.json();
+
+                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (jsonText) {
+
+                    const translation = JSON.parse(jsonText);
+
+                    correctKannadaAnswer = translation.kannada; // Store for explanation
+
+                    correctTransliteration = translation.transliteration;
+
+                    kannadaTranslationEl.textContent = translation.kannada;
+
+                    transliterationTranslationEl.innerHTML = `<span class="text-xl font-bold text-gray-900">${translation.transliteration}</span>`;
+
+                   
+
+                    const pronounceButton = document.createElement('button');
+
+                    pronounceButton.textContent = 'Pronounce';
+
+                    pronounceButton.className = 'btn bg-indigo-600 text-white text-xs py-1 px-2 rounded-md ml-2';
+
+                    pronounceButton.onclick = (e) => handlePronounce(translation.kannada, e.currentTarget);
+
+                    transliterationTranslationEl.appendChild(pronounceButton);
+
+
+
+                    // Fetch and display explanation
+
+                    translateExplanationContainer.innerHTML = '<div id="explanation-loader" class="mx-auto my-4"></div>';
+
+                    translateExplanationContainer.classList.remove('hidden');
+
+                    const explanation = await getExplanation(true, textToTranslate);
+
+                   
+
+                    let explanationHTML = `<div class="bg-gray-100 p-4 rounded-lg text-left text-sm"><h3 class="font-bold text-gray-800 mb-2">Word Meanings</h3>${renderMarkdown(explanation.wordMeanings)}</div>`;
+
+                     if (explanation.quickTip) {
+
+                        explanationHTML += `<div class="bg-gray-100 p-4 rounded-lg text-left text-sm mt-2"><h3 class="font-bold text-gray-800 mb-2">Quick Tip</h3>${renderMarkdown(explanation.quickTip)}</div>`;
+
+                    }
+
+                    translateExplanationContainer.innerHTML = explanationHTML;
+
+
+
+                } else {
+
+                    throw new Error("Invalid translation data.");
+
+                }
+
+            } catch (error) {
+
+                console.error("Translation failed:", error);
+
+                kannadaTranslationEl.textContent = "Sorry, translation failed.";
+
+                transliterationTranslationEl.textContent = "";
+
+            } finally {
+
+                translateLoader.classList.add('hidden');
+
+                translateOutput.classList.remove('hidden');
+
+                translateBtn.disabled = false;
+
+            }
+
+        }
+
+
+
+        function base64ToArrayBuffer(base64) { const binaryString = window.atob(base64); const len = binaryString.length; const bytes = new Uint8Array(len); for (let i = 0; i < len; i++) { bytes[i] = binaryString.charCodeAt(i); } return bytes.buffer; }
+
+        function pcmToWav(pcmData, sampleRate) { const numChannels = 1, bitsPerSample = 16, blockAlign = (numChannels * bitsPerSample) / 8, byteRate = sampleRate * blockAlign, dataSize = pcmData.length * (bitsPerSample / 8), buffer = new ArrayBuffer(44 + dataSize), view = new DataView(buffer); view.setUint32(0, 0x52494646, false); view.setUint32(4, 36 + dataSize, true); view.setUint32(8, 0x57415645, false); view.setUint32(12, 0x666d7420, false); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true); view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true); view.setUint16(34, bitsPerSample, true); view.setUint32(36, 0x64617461, false); view.setUint32(40, dataSize, true); for (let i = 0; i < pcmData.length; i++) { view.setInt16(44 + i * 2, pcmData[i], true); } return new Blob([view], { type: 'audio/wav' }); }
+
+       
+
+        async function handlePronounce(kannadaText, btnEl = null) {
+
+            if (!kannadaText || kannadaText === 'ದೋಷ') return;
+
+            setAudioLoading(true, btnEl);
+
+            showError('');
+
+            const payload = { contents: [{ parts: [{ text: kannadaText }] }], generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } } };
+
+            const apiKey = "";
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+            let attempts = 0, maxAttempts = 5, delay = 1000;
+
+            while (attempts < maxAttempts) {
+
+                try {
+
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+                    if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+                    const result = await response.json();
+
+                    const part = result?.candidates?.[0]?.content?.parts?.[0];
+
+                    const audioData = part?.inlineData?.data;
+
+                    const mimeType = part?.inlineData?.mimeType;
+
+                    if (audioData && mimeType?.startsWith("audio/")) {
+
+                        const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+
+                        if (!sampleRateMatch) throw new Error("Sample rate not found.");
+
+                        const sampleRate = parseInt(sampleRateMatch[1], 10);
+
+                        const pcm16 = new Int16Array(base64ToArrayBuffer(audioData));
+
+                        const audioUrl = URL.createObjectURL(pcmToWav(pcm16, sampleRate));
+
+                        audioPlayer.src = audioUrl;
+
+                        audioPlayer.play();
+
+                        setAudioLoading(false, btnEl);
+
+                        return;
+
+                    } else {
+
+                        console.error("Full API response on error:", result);
+
+                        throw new Error("Invalid audio data in API response.");
+
+                    }
+
+                } catch (error) {
+
+                    console.error(`Attempt ${attempts + 1} failed:`, error);
+
+                    attempts++;
+
+                    if (attempts >= maxAttempts) { showError("Failed to get pronunciation."); setAudioLoading(false, btnEl); break; }
+
+                    await new Promise(resolve => setTimeout(resolve, delay));
+
+                    delay *= 2;
+
+                }
+
+            }
+
+        }
+
+
+
+        // --- Event Listeners ---
+
+        nextPhraseBtn.addEventListener('click', generateNewPhrase);
+
+        modes.guide.checkBtn.addEventListener('click', checkAnswer);
+
+        modes.guide.revealBtn.addEventListener('click', revealAnswer);
+
+        modes.guide.micBtn.addEventListener('click', handleMicClick);
+
+        modes.speak.checkBtn.addEventListener('click', checkAnswer);
+
+        modes.speak.revealBtn.addEventListener('click', revealAnswer);
+
+        modes.speak.micBtn.addEventListener('click', handleMicClick);
+
+        translateBtn.addEventListener('click', handleTranslate);
+
+        clearTranslateBtn.addEventListener('click', () => {
+
+            translateInput.value = '';
+
+            translateOutputContainer.classList.add('hidden');
+
+            translateExplanationContainer.classList.add('hidden');
+
+        });
+
+        micBtnTranslate.addEventListener('click', () => {
+
+            if(recognition) {
+
+                translateInput.value = '';
+
+                recognition.lang = 'en-US';
+
+                recognition.start();
+
+                listeningStatusTranslate.classList.remove('hidden');
+
+                micBtnTranslate.classList.add('listening');
+
+                recognition.onspeechend = () => {
+
+                    recognition.stop();
+
+                    listeningStatusTranslate.classList.add('hidden');
+
+                    micBtnTranslate.classList.remove('listening');
+
+                };
+
+            }
+
+        });
+
+       
+
+        modes.guide.input.addEventListener('keydown', (e) => {
+
+            if (e.key === 'Enter') {
+
+                e.preventDefault();
+
+                checkAnswer();
+
+            }
+
+        });
+
+        modes.speak.input.addEventListener('keydown', (e) => {
+
+            if (e.key === 'Enter') {
+
+                e.preventDefault();
+
+                checkAnswer();
+
+            }
+
+        });
+
+        translateInput.addEventListener('keydown', (e) => {
+
+            if (e.key === 'Enter') {
+
+                e.preventDefault();
+
+                handleTranslate();
+
+            }
+
+        });
+
+
+
+        // --- Initial Load ---
+
+        window.onload = () => {
+
+            adjustLayout();
+
+            window.addEventListener('resize', adjustLayout);
+
+            setupSpeechRecognition();
+
+            generateNewPhrase();
+
+        };
+
+
+
+    </script>
+
+</body>
+
+</html>
+
+
+
+***************************************************************************************
+
+B) For Learning Irish (for people from India but living/working in Ireland. The app will help them to understand & interact with local people in Ireland)
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simply Foghlaim Gaeilge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            height: 100dvh;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            overflow: hidden;
+        }
+        .scrollable-content {
+            overflow-y: auto;
+            min-height: 0;
+        }
+        .scrollable-content::-webkit-scrollbar {
+            width: 16px;
+        }
+        .scrollable-content::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .scrollable-content::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 10px;
+            border: 4px solid white;
+        }
+        .scrollable-content::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        .scrollable-content {
+            scrollbar-width: thick;
+            scrollbar-color: #9ca3af #e2e8f0;
+        }
+        .btn {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+        }
+        .btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        #loader, .phrase-loader, #feedback-loader, #explanation-loader, #translate-loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #16a34a; 
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        .spinner-inline {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tab {
+            cursor: pointer;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            background-color: #f3f4f6;  
+            color: #4b5563;  
+        }
+        .tab.active {
+            background-color: #dcfce7;
+            color: #16a34a;
+        }
+        .level-btn, .app-mode-btn {
+            flex: 1;
+            padding: 0.25rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        .app-mode-btn.active {
+            background-color: #16a34a;
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .level-btn.active {
+            background-color: white;
+            color: #16a34a;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-color: #e5e7eb;
+        }
+        .mic-btn {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+        }
+        .mic-btn:hover {
+            color: #16a34a;
+        }
+        .mic-btn.listening {
+            color: #ef4444;
+        }
+        .feedback-container ul, .answer-explanation ul {
+            list-style-type: disc;
+            padding-left: 20px;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-2 sm:p-4">
+
+    <div id="main-card" class="card w-full max-w-2xl mx-auto text-center">
+        <!-- Header Section -->
+        <div id="header-section" class="p-2 sm:p-4 pb-0 flex-shrink-0">
+            <h1 class="text-lg md:text-xl font-bold text-gray-800">Simply Foghlaim Gaeilge</h1>
+            <p class="text-xs text-gray-500 mb-2 italic">No more "Níl Gaeilge agam"!</p>
+            
+            <div class="flex justify-center bg-gray-100 p-1 rounded-lg my-2 max-w-md mx-auto">
+                <button id="app-mode-learn" class="app-mode-btn active text-xs sm:text-sm" onclick="switchAppMode('learn')">Learn with Examples</button>
+                <button id="app-mode-translate" class="app-mode-btn text-xs sm:text-sm" onclick="switchAppMode('translate')">Just Translate (Eng → Gae)</button>
+            </div>
+
+            <div id="learning-controls">
+                <div class="flex justify-center bg-gray-100 p-1 rounded-lg mb-2 max-w-xs mx-auto">
+                    <button id="level-basic" class="level-btn active text-xs" onclick="switchLevel('basic')">Basic</button>
+                    <button id="level-intermediate" class="level-btn text-xs" onclick="switchLevel('intermediate')">Intermediate</button>
+                </div>
+
+                <div class="flex justify-around items-center border-b border-gray-200 pb-1 mb-1">
+                    <div class="flex flex-col items-center">
+                        <h2 class="text-xs font-semibold text-gray-700 mb-1">Lazy Listen</h2>
+                        <div id="tab-listen" class="tab active text-sm" onclick="switchMode('listen')">(Eng → Gae)</div>
+                    </div>
+                    <div class="border-l border-gray-200 self-stretch mx-2"></div>
+                    <div class="flex flex-col items-center">
+                        <h2 class="text-xs font-semibold text-gray-700 mb-1">Guided Workout</h2>
+                        <div class="flex gap-x-2 md:gap-x-4">
+                            <div id="tab-guide" class="tab text-sm" onclick="switchMode('guide')">(Gae → Eng)</div>
+                            <div id="tab-speak" class="tab text-sm" onclick="switchMode('speak')">(Eng → Gae)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content (Scrollable Area) -->
+        <div id="scrollable-content" class="scrollable-content px-4 sm:px-6">
+            <div id="error-message" class="text-red-500 my-4 hidden"></div>
+            <audio id="audio-player" class="hidden"></audio>
+
+            <!-- Learning Section -->
+            <div id="learn-section">
+                <!-- Simply Listen Mode -->
+                <div id="simply-listen-mode">
+                    <div class="bg-gray-50 p-3 sm:p-4 rounded-lg mb-4 min-h-[160px] flex flex-col justify-center relative text-left">
+                        <div id="phrase-loader-listen" class="phrase-loader mx-auto my-4 hidden"></div>
+                        <div id="phrase-content-listen">
+                            <p id="category-listen" class="text-xs font-semibold text-green-600 uppercase mb-3 text-center">Category</p>
+                            <div class="space-y-2 border border-gray-100 rounded-lg p-3">
+                                <div class="grid grid-cols-[100px,1fr] sm:grid-cols-[150px,1fr] gap-x-3 items-center">
+                                    <p class="font-bold text-sm text-gray-600 text-left">English:</p>
+                                    <p id="english-sentence-listen" class="text-sm text-gray-800 text-left"></p>
+                                </div>
+                                <div class="grid grid-cols-[100px,1fr] sm:grid-cols-[150px,1fr] gap-x-3 items-center">
+                                    <p class="font-bold text-sm text-gray-600 text-left">Irish Script:</p>
+                                    <p id="irish-sentence-listen" class="text-sm font-semibold text-gray-900 text-left"></p>
+                                </div>
+                                <div class="grid grid-cols-[100px,1fr] sm:grid-cols-[150px,1fr] gap-x-3 items-center">
+                                    <p class="font-bold text-sm text-gray-600 text-left self-start pt-1">Pronunciation:</p>
+                                    <div id="pronunciation-listen" class="flex items-center flex-wrap"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="listen-explanation-container" class="my-4"></div>
+                </div>
+
+                <!-- Listen & Guide Mode (Irish -> Eng) -->
+                <div id="listen-guide-mode" class="hidden">
+                    <div class="bg-gray-50 p-3 sm:p-4 rounded-lg mb-4 min-h-[120px] flex flex-col justify-center relative text-left">
+                        <div id="phrase-loader-guide" class="phrase-loader mx-auto my-4 hidden"></div>
+                        <div id="phrase-content-guide">
+                             <p id="category-guide" class="text-xs font-semibold text-green-600 uppercase mb-3 text-center">Category</p>
+                            <div class="space-y-2 border border-gray-100 rounded-lg p-3">
+                                <div class="grid grid-cols-[100px,1fr] sm:grid-cols-[150px,1fr] gap-x-3 items-center">
+                                    <p class="font-bold text-sm text-gray-600 text-left">Irish Script:</p>
+                                    <p id="irish-sentence-guide" class="text-sm font-semibold text-gray-900 text-left"></p>
+                                </div>
+                                <div class="grid grid-cols-[100px,1fr] sm:grid-cols-[150px,1fr] gap-x-3 items-center">
+                                    <p class="font-bold text-sm text-gray-600 text-left self-start pt-1">Pronunciation:</p>
+                                    <div id="pronunciation-guide" class="flex items-center flex-wrap"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 mb-2 text-sm text-center">What does this mean in English?</p>
+                    <div class="relative w-full mb-4">
+                        <textarea id="user-translation-guide" class="w-full p-2 pr-12 border border-gray-300 rounded-lg" rows="2" placeholder="Type or click the mic to speak..."></textarea>
+                        <button id="mic-btn-guide" class="mic-btn" title="Speak your translation">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                        </button>
+                    </div>
+                    <p id="listening-status-guide" class="text-sm text-red-500 mb-2 hidden text-center">Listening...</p>
+                    <div id="feedback-container-guide" class="feedback-container bg-blue-50 p-4 rounded-lg my-4 text-left hidden"></div>
+                    <div id="guide-answer-container" class="hidden my-4"></div>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center"><button id="check-answer-btn-guide" class="btn bg-green-600 text-white font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-green-700">Check Answer</button><button id="reveal-answer-btn-guide" class="btn bg-yellow-500 text-white font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-yellow-600">Reveal Answer</button></div>
+                </div>
+
+                <!-- Speak & Guide Mode (Eng -> Irish) -->
+                <div id="speak-guide-mode" class="hidden">
+                     <div class="bg-gray-50 p-3 sm:p-4 rounded-lg mb-4 min-h-[100px] flex flex-col justify-center relative text-center">
+                        <div id="phrase-loader-speak" class="phrase-loader mx-auto my-4 hidden"></div>
+                        <div id="phrase-content-speak">
+                            <p id="category-speak" class="text-xs font-semibold text-green-600 uppercase mb-1">Category</p>
+                            <p id="english-sentence-speak" class="text-lg sm:text-xl font-semibold text-gray-900">English Sentence</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 mb-2 text-sm text-center">How do you say this in Irish?</p>
+                    <div class="relative w-full mb-4">
+                        <textarea id="user-translation-speak" class="w-full p-2 pr-12 border border-gray-300 rounded-lg" rows="2" placeholder="Type or click the mic to speak..."></textarea>
+                        <button id="mic-btn-speak" class="mic-btn" title="Speak your translation">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                        </button>
+                    </div>
+                    <p id="listening-status-speak" class="text-sm text-red-500 mb-2 hidden text-center">Listening...</p>
+                    <div id="feedback-container-speak" class="feedback-container bg-blue-50 p-4 rounded-lg my-4 text-left hidden"></div>
+                    <div id="speak-answer-container" class="hidden my-4"></div>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center"><button id="check-answer-btn-speak" class="btn bg-green-600 text-white font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-green-700">Check Answer</button><button id="reveal-answer-btn-speak" class="btn bg-yellow-500 text-white font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-yellow-600">Reveal Answer</button></div>
+                </div>
+            </div>
+
+            <!-- Translate Section -->
+            <div id="translate-section" class="hidden">
+                <p class="text-gray-600 mb-2 text-center">Enter English text to translate into Irish.</p>
+                <div class="relative w-full mb-4">
+                    <textarea id="translate-input" class="w-full p-2 pr-12 border border-gray-300 rounded-lg" rows="3" placeholder="Type or click the mic to speak..."></textarea>
+                    <button id="mic-btn-translate" class="mic-btn" title="Speak English text">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                    </button>
+                </div>
+                <p id="listening-status-translate" class="text-sm text-red-500 mb-2 hidden text-center">Listening...</p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button id="translate-btn" class="btn bg-green-600 text-white font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-green-700 w-full">Translate</button>
+                    <button id="clear-translate-btn" class="btn bg-gray-200 text-gray-800 font-semibold py-2 px-4 text-sm rounded-lg shadow-md hover:bg-gray-300 w-full">Clear</button>
+                </div>
+                <div id="translate-output-container" class="hidden mt-4 bg-gray-50 p-4 rounded-lg text-left">
+                    <div id="translate-loader" class="mx-auto my-4 hidden"></div>
+                    <div id="translate-output">
+                        <div class="space-y-2 border border-gray-100 rounded-lg p-3">
+                            <div class="grid grid-cols-[110px,1fr] sm:grid-cols-[150px,1fr] gap-x-3 items-center">
+                                <p class="font-bold text-sm text-gray-600 text-left">Irish Script:</p>
+                                <p id="irish-translation" class="text-lg font-semibold text-gray-900 text-left"></p>
+                            </div>
+                            <div class="grid grid-cols-[110px,1fr] sm:grid-cols-[150px,1fr] gap-x-3 items-center">
+                                <p class="font-bold text-sm text-gray-600 text-left self-start pt-1">Pronunciation:</p>
+                                <div id="pronunciation-translation" class="flex items-center flex-wrap"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="translate-explanation-container" class="my-4"></div>
+            </div>
+        </div>
+        
+        <!-- Footer Section -->
+        <div id="footer-section" class="p-4 sm:p-6 pt-0 flex-shrink-0">
+            <div id="loader" class="mx-auto my-4 hidden"></div>
+            <div id="footer-buttons" class="flex flex-col sm:flex-row gap-4 justify-center mt-4">
+                <button id="next-phrase-btn" class="btn border border-green-600 text-green-600 font-semibold py-2 px-4 text-sm rounded-lg shadow-sm hover:bg-green-50">
+                    Next Sentence
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State ---
+        let appMode = 'learn';
+        let currentMode = 'listen';
+        let currentLevel = 'basic';
+        let correctEnglishAnswer = '';
+        let correctIrishAnswer = '';
+        let correctPronunciation = '';
+        let recognition;
+        let attemptHistory = [];
+
+        // --- DOM Elements ---
+        const mainCard = document.getElementById('main-card');
+        const headerSection = document.getElementById('header-section');
+        const scrollableContent = document.getElementById('scrollable-content');
+        const footerSection = document.getElementById('footer-section');
+        const nextPhraseBtn = document.getElementById('next-phrase-btn');
+        const audioPlayer = document.getElementById('audio-player');
+        const loader = document.getElementById('loader');
+        const errorMessage = document.getElementById('error-message');
+        
+        const learningControls = document.getElementById('learning-controls');
+        const learnSection = document.getElementById('learn-section');
+        const translateSection = document.getElementById('translate-section');
+        const footerButtons = document.getElementById('footer-buttons');
+
+        const translateInput = document.getElementById('translate-input');
+        const translateBtn = document.getElementById('translate-btn');
+        const clearTranslateBtn = document.getElementById('clear-translate-btn');
+        const translateOutputContainer = document.getElementById('translate-output-container');
+        const translateLoader = document.getElementById('translate-loader');
+        const translateOutput = document.getElementById('translate-output');
+        const irishTranslationEl = document.getElementById('irish-translation');
+        const pronunciationTranslationEl = document.getElementById('pronunciation-translation');
+        const micBtnTranslate = document.getElementById('mic-btn-translate');
+        const listeningStatusTranslate = document.getElementById('listening-status-translate');
+        const translateExplanationContainer = document.getElementById('translate-explanation-container');
+        
+        const modes = {
+            listen: {
+                el: document.getElementById('simply-listen-mode'),
+                loader: document.getElementById('phrase-loader-listen'),
+                content: document.getElementById('phrase-content-listen'),
+                category: document.getElementById('category-listen'),
+                english: document.getElementById('english-sentence-listen'),
+                irish: document.getElementById('irish-sentence-listen'),
+                pronunciation: document.getElementById('pronunciation-listen'),
+                explanationContainer: document.getElementById('listen-explanation-container'),
+            },
+            guide: {
+                el: document.getElementById('listen-guide-mode'),
+                loader: document.getElementById('phrase-loader-guide'),
+                content: document.getElementById('phrase-content-guide'),
+                category: document.getElementById('category-guide'),
+                irish: document.getElementById('irish-sentence-guide'),
+                pronunciation: document.getElementById('pronunciation-guide'),
+                answerContainer: document.getElementById('guide-answer-container'),
+                input: document.getElementById('user-translation-guide'),
+                micBtn: document.getElementById('mic-btn-guide'),
+                listeningStatus: document.getElementById('listening-status-guide'),
+                feedbackContainer: document.getElementById('feedback-container-guide'),
+                checkBtn: document.getElementById('check-answer-btn-guide'),
+                revealBtn: document.getElementById('reveal-answer-btn-guide'),
+            },
+            speak: {
+                el: document.getElementById('speak-guide-mode'),
+                loader: document.getElementById('phrase-loader-speak'),
+                content: document.getElementById('phrase-content-speak'),
+                category: document.getElementById('category-speak'),
+                english: document.getElementById('english-sentence-speak'),
+                answerContainer: document.getElementById('speak-answer-container'),
+                input: document.getElementById('user-translation-speak'),
+                micBtn: document.getElementById('mic-btn-speak'),
+                listeningStatus: document.getElementById('listening-status-speak'),
+                feedbackContainer: document.getElementById('feedback-container-speak'),
+                checkBtn: document.getElementById('check-answer-btn-speak'),
+                revealBtn: document.getElementById('reveal-answer-btn-speak'),
+            }
+        };
+
+        const themes = [
+            "Transportation (buses, Luas, DART, taxis)",
+            "Food & Dining (pubs, restaurants, ordering, paying)",
+            "Shopping (supermarkets, local shops, asking for items)",
+            "Daily Life & Home (talking to neighbors, landlords, postman)",
+            "Work & Office (meetings, colleagues, small talk about the weekend)",
+            "Socializing (making plans, invitations, talking about the weather)",
+            "Services (plumbers, electricians, deliveries, appointments)",
+            "Health & Wellness (doctor's appointments, pharmacy, describing symptoms)",
+            "Navigating the City (asking for directions in Dublin, landmarks, traffic)",
+            "Applying for a PPS number or Irish Residence Permit (IRP)",
+            "Dealing with Revenue (the Irish tax office)",
+            "Inquiring about services at a local County Council office",
+            "Watching or talking about sports (Gaelic football, hurling, rugby)"
+        ];
+
+        function adjustLayout() {
+            const vh = window.innerHeight;
+            mainCard.style.height = `${vh}px`;
+            setTimeout(() => {
+                const headerHeight = headerSection.offsetHeight;
+                const footerHeight = footerSection.offsetHeight;
+                const contentHeight = vh - headerHeight - footerHeight;
+                scrollableContent.style.height = `${contentHeight}px`;
+            }, 100);
+        }
+
+        function setupSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+                
+                recognition.onresult = (event) => {
+                    const speechResult = event.results[0][0].transcript;
+                    if (appMode === 'translate') {
+                        translateInput.value = speechResult;
+                    } else { 
+                        modes[currentMode].input.value = speechResult;
+                    }
+                };
+
+                recognition.onspeechend = () => {
+                    recognition.stop();
+                    if(appMode === 'learn') {
+                        modes[currentMode].listeningStatus.classList.add('hidden');
+                        modes[currentMode].micBtn.classList.remove('listening');
+                    } else {
+                        listeningStatusTranslate.classList.add('hidden');
+                        micBtnTranslate.classList.remove('listening');
+                    }
+                };
+                recognition.onerror = (event) => {
+                    showError(`Speech recognition error: ${event.error}`);
+                     if(appMode === 'learn') {
+                        modes[currentMode].listeningStatus.classList.add('hidden');
+                        modes[currentMode].micBtn.classList.remove('listening');
+                    } else {
+                        listeningStatusTranslate.classList.add('hidden');
+                        micBtnTranslate.classList.remove('listening');
+                    }
+                };
+            } else {
+                document.querySelectorAll('.mic-btn').forEach(btn => btn.style.display = 'none');
+                showError("Speech recognition is not supported in this browser.");
+            }
+        }
+        
+        function handleMicClick() {
+            if (recognition) {
+                const modeUI = modes[currentMode];
+                modeUI.input.value = '';
+                if (modeUI.feedbackContainer) modeUI.feedbackContainer.classList.add('hidden');
+                recognition.lang = currentMode === 'guide' ? 'en-IE' : 'ga-IE';
+                recognition.start();
+                modeUI.listeningStatus.classList.remove('hidden');
+                modeUI.micBtn.classList.add('listening');
+            }
+        }
+
+        function switchLevel(level) {
+            setPhraseLoading(true);
+            currentLevel = level;
+            document.getElementById('level-basic').classList.toggle('active', level === 'basic');
+            document.getElementById('level-intermediate').classList.toggle('active', level === 'intermediate');
+            generateNewPhrase();
+        }
+
+        function switchMode(mode) {
+            setPhraseLoading(true);
+            currentMode = mode;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${mode}`).classList.add('active');
+            Object.values(modes).forEach(m => { if(m.el) m.el.classList.add('hidden')});
+            modes[mode].el.classList.remove('hidden');
+            generateNewPhrase();
+        }
+        
+        function switchAppMode(mode) {
+            appMode = mode;
+            document.getElementById('app-mode-learn').classList.toggle('active', mode === 'learn');
+            document.getElementById('app-mode-translate').classList.toggle('active', mode === 'translate');
+
+            learningControls.classList.toggle('hidden', mode !== 'learn');
+            learnSection.classList.toggle('hidden', mode !== 'learn');
+            translateSection.classList.toggle('hidden', mode === 'learn');
+
+            if (mode === 'learn') {
+                footerButtons.classList.remove('hidden');
+                generateNewPhrase();
+            } else {
+                footerButtons.classList.add('hidden');
+            }
+            adjustLayout();
+        }
+        
+        function displayPhrase(phrase) {
+            correctEnglishAnswer = phrase.english;
+            correctIrishAnswer = phrase.irish;
+            correctPronunciation = phrase.pronunciation;
+            Object.values(modes).forEach(m => { if(m.category) m.category.textContent = phrase.category; });
+            
+            modes.listen.english.textContent = phrase.english;
+            modes.listen.irish.textContent = phrase.irish;
+            modes.listen.pronunciation.innerHTML = `<span class="text-base sm:text-lg font-bold text-gray-900">${phrase.pronunciation}</span><button onclick="handlePronounce('${phrase.irish}', this)" class="btn bg-green-600 text-white text-xs py-1 px-2 rounded-md ml-2">Pronounce</button>`;
+            
+            modes.guide.irish.textContent = phrase.irish;
+            modes.guide.pronunciation.innerHTML = `<span class="text-base sm:text-lg font-bold text-gray-900">${phrase.pronunciation}</span><button onclick="handlePronounce('${phrase.irish}', this)" class="btn bg-green-600 text-white text-xs py-1 px-2 rounded-md ml-2">Pronounce</button>`;
+            
+            modes.speak.english.textContent = phrase.english;
+        }
+        
+        function setAudioLoading(isLoading, btnEl = null) {
+            if (btnEl) {
+                if (isLoading) {
+                    btnEl.disabled = true;
+                    btnEl.innerHTML = '<div class="spinner-inline mx-auto"></div>';
+                } else {
+                    btnEl.disabled = false;
+                    btnEl.innerHTML = 'Pronounce';
+                }
+            }
+        }
+
+        function setPhraseLoading(isLoading) {
+            document.querySelectorAll('.phrase-loader').forEach(loader => {
+                loader.classList.toggle('hidden', !isLoading);
+            });
+            document.querySelectorAll('[id^="phrase-content-"]').forEach(content => {
+                content.classList.toggle('hidden', isLoading);
+            });
+            nextPhraseBtn.disabled = isLoading;
+            
+            if (isLoading) {
+                Object.values(modes).forEach(modeUI => {
+                    if (modeUI.explanationContainer) {
+                        modeUI.explanationContainer.classList.add('hidden');
+                        modeUI.explanationContainer.innerHTML = '';
+                    }
+                    if (modeUI.answerContainer) {
+                        modeUI.answerContainer.classList.add('hidden');
+                        modeUI.answerContainer.innerHTML = '';
+                    }
+                    if (modeUI.feedbackContainer) {
+                        modeUI.feedbackContainer.classList.add('hidden');
+                        modeUI.feedbackContainer.innerHTML = '';
+                    }
+                    if (modeUI.input) {
+                        modeUI.input.value = '';
+                    }
+                });
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            setTimeout(() => { errorMessage.classList.add('hidden'); }, 4000);
+        }
+
+        function renderMarkdown(text) {
+            let html = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
+            if (html.includes('* ')) {
+                const listItems = html.split('* ').slice(1);
+                html = '<ul>' + listItems.map(item => `<li class="ml-4">${item.trim()}</li>`).join('') + '</ul>';
+            }
+            return html;
+        }
+
+        async function generateNewPhrase() {
+            setPhraseLoading(true);
+            showError('');
+            attemptHistory = [];
+
+            const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+            const lengthConstraint = currentLevel === 'basic' ? 'that is simple and less than 6 words long' : 'that is of intermediate complexity and between 6 and 15 words long';
+            
+            const prompt = `You are generating sentences for an Irish (Gaeilge) learning app for Indians living in Ireland. Your goal is to create a unique, practical, daily-use English sentence and its Irish translation.
+
+1.  **Theme:** "${randomTheme}"
+2.  **Your Task:** Based on this theme, invent a *specific, everyday scenario* that might happen in Ireland.
+3.  **Sentence:** Create an English sentence that fits the scenario. The sentence should be ${lengthConstraint}.
+4.  **Translation:** Provide the correct, natural-sounding Irish (Gaeilge) translation.
+5.  **Pronunciation:** Provide a simple, phonetic pronunciation guide for the Irish sentence, suitable for an English speaker from India. For example, for 'Go raibh maith agat' the pronunciation could be 'Guh rev mah ah-gut'.
+
+Return ONLY the JSON object with "category", "english", "irish", and "pronunciation" keys. For the "category" key, use the specific scenario you invented.`;
+            
+            const payload = { 
+                contents: [{ role: "user", parts: [{ text: prompt }] }], 
+                generationConfig: { 
+                    responseMimeType: "application/json", 
+                    responseSchema: { 
+                        type: "OBJECT", 
+                        properties: { 
+                            "category": { "type": "STRING" }, 
+                            "english": { "type": "STRING" }, 
+                            "irish": { "type": "STRING" }, 
+                            "pronunciation": { "type": "STRING" } 
+                        }, 
+                        required: ["category", "english", "irish", "pronunciation"] 
+                    } 
+                } 
+            };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (jsonText) {  
+                    displayPhrase(JSON.parse(jsonText));  
+                    if (currentMode === 'listen') {
+                        handleExplainListen();
+                    }
+                } else { throw new Error("Invalid JSON data."); }
+            } catch (error) {
+                console.error("Failed to generate new phrase:", error);
+                showError("Could not generate a new phrase. Please try again.");
+                displayPhrase({ category: 'Error', english: 'Failed to load new phrase.', irish: 'Earráid', pronunciation: 'Arr-aw-id' });
+            } finally {
+                setPhraseLoading(false);
+            }
+        }
+
+        async function checkAnswer() {
+            const modeUI = modes[currentMode];
+            const userAnswer = modeUI.input.value.trim();
+            if (!userAnswer) {
+                showError("Please enter your translation.");
+                return;
+            }
+            modeUI.feedbackContainer.classList.remove('hidden');
+            modeUI.feedbackContainer.innerHTML = '<div id="feedback-loader" class="mx-auto my-4"></div>';
+            modeUI.checkBtn.disabled = true;
+
+            const previousAttemptsText = attemptHistory.length > 0 ? `The student's previous incorrect attempts for this sentence were: "${attemptHistory.join('", "')}".` : "This is the student's first attempt.";
+            
+            let prompt;
+            if (currentMode === 'guide') {
+                prompt = `You are a friendly Irish language tutor. YOUR ENTIRE RESPONSE MUST BE IN ENGLISH. 
+                **Irish Sentence:** "${correctIrishAnswer}" (pronounced roughly as "${correctPronunciation}")
+                **Correct English Translation:** "${correctEnglishAnswer}"
+                **Student's CURRENT Attempt:** "${userAnswer}"
+                Analyze the attempt and respond with the following structure:
+                * Start with an encouraging opening remark (e.g., "Good try!", "You're close!").
+                * **What's Right:** Acknowledge any parts they got correct.
+                * **Main Point to Improve:** Clearly explain the main error in English.
+                * **Hint:** Provide a guiding question in English to help them self-correct.`;
+            } else { // Speak mode
+                prompt = `You are a friendly Irish language tutor. YOUR ENTIRE RESPONSE MUST BE IN ENGLISH. When you reference an Irish word, you MUST use the format: '**word** (pronunciation)'.
+                **English Sentence:** "${correctEnglishAnswer}"
+                **Correct Irish Translation:** "${correctIrishAnswer}" (pronounced roughly as "${correctPronunciation}")
+                **Student's CURRENT Attempt:** "${userAnswer}"
+                Analyze the attempt and respond with the following structure:
+                * Start with an encouraging opening remark.
+                * **What's Right:** Acknowledge any parts they got correct.
+                * **Main Point to Improve:** Clearly explain the main error in English (e.g., word order, wrong word, etc.).
+                * **Hint:** Provide a guiding question in English to help them self-correct.`;
+            }
+            
+            attemptHistory.push(userAnswer);
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const hint = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (hint) { modeUI.feedbackContainer.innerHTML = `<h3 class="font-bold text-blue-800 mb-2">Guidance</h3><div class="text-blue-700 whitespace-pre-wrap text-left">${renderMarkdown(hint)}</div>`; } else { throw new Error("Could not get feedback."); }
+            } catch (error) {
+                console.error("Failed to get feedback:", error);
+                modeUI.feedbackContainer.innerHTML = `<h3 class="font-bold text-blue-800 mb-2">Guidance</h3><p>Sorry, I couldn't process that. Please try again.</p>`;
+            } finally {
+                modeUI.checkBtn.disabled = false;
+            }
+        }
+
+        async function getExplanation(forTranslate = false, sourceText = '') {
+            let prompt;
+            const basePrompt = `You are an Irish language teacher explaining a sentence to an English speaker from India. Your response MUST be a JSON object with two keys: "wordMeanings" and "quickTip".
+            
+            For the "wordMeanings" value, provide a brief, easy-to-understand list of the most important words and their meanings using markdown, with each word on a new line starting with '* '. Use the format: '**Irish Word** (pronunciation) - meaning'.
+            
+            For the "quickTip" value, provide one practical usage tip about a word or grammar pattern from the sentence. Explain it simply and give another example. **Strictly avoid technical grammar terms**. In this "quickTip" section, you **MUST NOT** use Irish script. Only use the Irish words in Roman script and make sure to wrap them in **bold** markdown.`;
+
+            if (forTranslate) {
+                prompt = `${basePrompt}
+                **English Sentence:** "${sourceText}"
+                **Correct Irish Translation:** "${correctIrishAnswer}" (pronounced "${correctPronunciation}")`;
+            } else if (currentMode === 'guide') {
+                prompt = `${basePrompt}
+                **Irish Sentence:** "${correctIrishAnswer}"
+                **Correct English Translation:** "${correctEnglishAnswer}"`;
+            } else { // speak or listen mode
+                prompt = `${basePrompt}
+                **English Sentence:** "${correctEnglishAnswer}"
+                **Correct Irish Translation:** "${correctIrishAnswer}" (pronounced "${correctPronunciation}")`;
+            }
+
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "wordMeanings": { "type": "STRING" }, "quickTip": { "type": "STRING" } }, required: ["wordMeanings", "quickTip"] } } };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (jsonText) {
+                    return JSON.parse(jsonText);
+                } else {
+                    throw new Error("Invalid explanation data.")
+                }
+            } catch (error) {
+                console.error("Failed to get explanation:", error);
+                return { wordMeanings: "Sorry, couldn't load the explanation.", quickTip: "" };
+            }
+        }
+
+        async function revealAnswer() {
+            const modeUI = modes[currentMode];
+            modeUI.answerContainer.classList.remove('hidden');
+            modeUI.feedbackContainer.classList.add('hidden');
+
+            let answerHTML = '';
+            if (currentMode === 'guide') {
+                answerHTML = `<div class="bg-green-100 p-2 rounded-lg text-left"><h3 class="font-bold text-green-800 mb-2 text-sm">Correct Answer</h3><p class="text-base text-gray-700">${correctEnglishAnswer}</p></div>`;
+            } else {
+                answerHTML = `<div class="bg-green-100 p-3 rounded-lg text-left"><h3 class="font-bold text-green-800 mb-2 text-sm">Correct Answer</h3>
+                <div class="space-y-2 border border-green-200 rounded-lg p-3 mt-2">
+                    <div class="grid grid-cols-[110px,1fr] sm:grid-cols-[150px,1fr] gap-x-3 items-center">
+                        <p class="font-bold text-sm text-gray-600 text-left">Irish Script:</p>
+                        <p class="text-base font-semibold text-gray-900 text-left">${correctIrishAnswer}</p>
+                    </div>
+                    <div class="grid grid-cols-[110px,1fr] sm:grid-cols-[150px,1fr] gap-x-3 items-center">
+                        <p class="font-bold text-sm text-gray-600 text-left self-start pt-1">Pronunciation:</p>
+                        <div class="flex items-center"><span class="text-base sm:text-lg font-bold text-gray-900 text-left">${correctPronunciation}</span></div>
+                    </div>
+                </div></div>`;
+            }
+            modeUI.answerContainer.innerHTML = answerHTML + '<div id="explanation-loader" class="mx-auto my-4"></div>';
+
+            const explanation = await getExplanation();
+            
+            let explanationHTML = `<div class="bg-green-50 border-t border-green-200 mt-2 p-4 rounded-lg text-left text-sm"><h3 class="font-bold text-green-800 mb-2">Word Meanings</h3>${renderMarkdown(explanation.wordMeanings)}</div>`;
+            if (explanation.quickTip) {
+                explanationHTML += `<div class="bg-green-50 border-t border-green-200 mt-2 p-4 rounded-lg text-left text-sm"><h3 class="font-bold text-green-800 mb-2">Quick Tip</h3>${renderMarkdown(explanation.quickTip)}</div>`;
+            }
+            modeUI.answerContainer.innerHTML = answerHTML + explanationHTML;
+            
+            if (currentMode === 'speak') {
+                const pronounceButton = document.createElement('button');
+                pronounceButton.textContent = 'Pronounce';
+                pronounceButton.className = 'btn bg-green-600 text-white text-xs py-1 px-2 rounded-md ml-2';
+                pronounceButton.onclick = (e) => handlePronounce(correctIrishAnswer, e.currentTarget);
+                modeUI.answerContainer.querySelector('.flex').appendChild(pronounceButton);
+            }
+        }
+        
+        async function handleExplainListen() {
+            const modeUI = modes.listen;
+            modeUI.explanationContainer.innerHTML = '<div id="explanation-loader" class="mx-auto my-4"></div>';
+            modeUI.explanationContainer.classList.remove('hidden');
+            const explanation = await getExplanation();
+
+            let explanationHTML = `<div class="bg-gray-100 p-4 rounded-lg text-left text-sm"><h3 class="font-bold text-gray-800 mb-2">Word Meanings</h3>${renderMarkdown(explanation.wordMeanings)}</div>`;
+             if (explanation.quickTip) {
+                explanationHTML += `<div class="bg-gray-100 p-4 rounded-lg text-left text-sm mt-2"><h3 class="font-bold text-gray-800 mb-2">Quick Tip</h3>${renderMarkdown(explanation.quickTip)}</div>`;
+            }
+            modeUI.explanationContainer.innerHTML = explanationHTML;
+        }
+
+        async function handleTranslate() {
+            const textToTranslate = translateInput.value.trim();
+            if (!textToTranslate) {
+                showError("Please enter some English text to translate.");
+                return;
+            }
+            translateOutputContainer.classList.remove('hidden');
+            translateLoader.classList.remove('hidden');
+            translateOutput.classList.add('hidden');
+            translateBtn.disabled = true;
+            translateExplanationContainer.innerHTML = '';
+            translateExplanationContainer.classList.add('hidden');
+
+            const prompt = `Translate the following English sentence into Irish (Gaeilge). Provide both the Irish text and a simple Roman script pronunciation guide for an English speaker. Return ONLY a JSON object with "irish" and "pronunciation" keys. Sentence: "${textToTranslate}"`;
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "irish": { "type": "STRING" }, "pronunciation": { "type": "STRING" } }, required: ["irish", "pronunciation"] } } };
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const result = await response.json();
+                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (jsonText) {
+                    const translation = JSON.parse(jsonText);
+                    correctIrishAnswer = translation.irish; 
+                    correctPronunciation = translation.pronunciation;
+                    irishTranslationEl.textContent = translation.irish;
+                    pronunciationTranslationEl.innerHTML = `<span class="text-base sm:text-lg font-bold text-gray-900">${translation.pronunciation}</span>`;
+                    
+                    const pronounceButton = document.createElement('button');
+                    pronounceButton.textContent = 'Pronounce';
+                    pronounceButton.className = 'btn bg-green-600 text-white text-xs py-1 px-2 rounded-md ml-2';
+                    pronounceButton.onclick = (e) => handlePronounce(translation.irish, e.currentTarget);
+                    pronunciationTranslationEl.appendChild(pronounceButton);
+
+                    // Fetch and display explanation
+                    translateExplanationContainer.innerHTML = '<div id="explanation-loader" class="mx-auto my-4"></div>';
+                    translateExplanationContainer.classList.remove('hidden');
+                    const explanation = await getExplanation(true, textToTranslate);
+                    
+                    let explanationHTML = `<div class="bg-gray-100 p-4 rounded-lg text-left text-sm"><h3 class="font-bold text-gray-800 mb-2">Word Meanings</h3>${renderMarkdown(explanation.wordMeanings)}</div>`;
+                     if (explanation.quickTip) {
+                        explanationHTML += `<div class="bg-gray-100 p-4 rounded-lg text-left text-sm mt-2"><h3 class="font-bold text-gray-800 mb-2">Quick Tip</h3>${renderMarkdown(explanation.quickTip)}</div>`;
+                    }
+                    translateExplanationContainer.innerHTML = explanationHTML;
+
+                } else {
+                    throw new Error("Invalid translation data.");
+                }
+            } catch (error) {
+                console.error("Translation failed:", error);
+                irishTranslationEl.textContent = "Sorry, translation failed.";
+                pronunciationTranslationEl.textContent = "";
+            } finally {
+                translateLoader.classList.add('hidden');
+                translateOutput.classList.remove('hidden');
+                translateBtn.disabled = false;
+            }
+        }
+
+        async function handlePronounce(irishText, btnEl = null) {
+            if (!irishText || irishText === 'Earráid') return;
+            setAudioLoading(true, btnEl);
+            showError('');
+
+            // --- IMPORTANT ---
+            // 1. Sign up for a free account at elevenlabs.io
+            // 2. Go to your Profile to find your API Key.
+            // 3. Paste your API key below.
+            const ELEVENLABS_API_KEY = "sk_97fd00772cd69e07905ae94d19675dd0e46da5462db7c7d5"; // <-- PASTE YOUR KEY HERE
+            
+            const VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; 
+
+            const apiUrl = `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`;
+            const payload = {
+                text: irishText,
+                model_id: "eleven_turbo_v2_5", 
+                voice_settings: {
+                    speed: 0.7, 
+                    stability: 0.4,
+                    similarity_boost: 0.75
+                }
+            };
+
+            try {
+                if (ELEVENLABS_API_KEY === "YOUR_ELEVENLABS_API_KEY") {
+                    throw new Error("Please add your ElevenLabs API key to the code.");
+                }
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'audio/mpeg',
+                        'Content-Type': 'application/json',
+                        'xi-api-key': ELEVENLABS_API_KEY
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} - ${await response.text()}`);
+                }
+
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioPlayer.src = audioUrl;
+                audioPlayer.play();
+
+            } catch (error) {
+                console.error("Failed to get pronunciation:", error);
+                showError("Could not get pronunciation. Check the API key and console for details.");
+            } finally {
+                setAudioLoading(false, btnEl);
+            }
+        }
+
+
+        // --- Event Listeners ---
+        nextPhraseBtn.addEventListener('click', generateNewPhrase);
+        modes.guide.checkBtn.addEventListener('click', checkAnswer);
+        modes.guide.revealBtn.addEventListener('click', revealAnswer);
+        modes.guide.micBtn.addEventListener('click', handleMicClick);
+        modes.speak.checkBtn.addEventListener('click', checkAnswer);
+        modes.speak.revealBtn.addEventListener('click', revealAnswer);
+        modes.speak.micBtn.addEventListener('click', handleMicClick);
+        translateBtn.addEventListener('click', handleTranslate);
+        clearTranslateBtn.addEventListener('click', () => {
+            translateInput.value = '';
+            translateOutputContainer.classList.add('hidden');
+            translateExplanationContainer.classList.add('hidden');
+        });
+        micBtnTranslate.addEventListener('click', () => {
+            if(recognition) {
+                translateInput.value = '';
+                recognition.lang = 'en-IE';
+                recognition.start();
+                listeningStatusTranslate.classList.remove('hidden');
+                micBtnTranslate.classList.add('listening');
+                recognition.onspeechend = () => {
+                    recognition.stop();
+                    listeningStatusTranslate.classList.add('hidden');
+                    micBtnTranslate.classList.remove('listening');
+                };
+            }
+        });
+        
+        modes.guide.input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkAnswer();
+            }
+        });
+        modes.speak.input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkAnswer();
+            }
+        });
+        translateInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleTranslate();
+            }
+        });
+
+        // --- Initial Load ---
+        window.onload = () => {
+            adjustLayout();
+            window.addEventListener('resize', adjustLayout);
+            setupSpeechRecognition();
+            generateNewPhrase();
+        };
+
+    </script>
+</body>
+</html>
+
+
+***********************************************
+Pls confirm that you understand both the apps/codes
