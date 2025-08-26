@@ -49,18 +49,38 @@ export default function LessonContent({ lesson, mode, languageId }: LessonConten
   });
 
   const playAudioMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (text?: string) => {
+      const textToSpeak = text || currentContent?.target || currentContent?.english;
+      
+      // Use Web Speech API for text-to-speech
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        
+        // Set language-specific voice
+        const voices = speechSynthesis.getVoices();
+        const targetLang = lesson.languageId === "lang-kannada" ? "kn" : "hi";
+        const voice = voices.find(v => v.lang.startsWith(targetLang)) || voices[0];
+        
+        if (voice) {
+          utterance.voice = voice;
+        }
+        
+        utterance.rate = 0.8; // Slightly slower for learning
+        utterance.pitch = 1.0;
+        
+        speechSynthesis.speak(utterance);
+        return { success: true };
+      }
+      
+      // Fallback to API call for future Google TTS integration
       const response = await apiRequest("POST", "/api/lessons/play-audio", {
-        text: currentContent?.target || currentContent?.english,
+        text: textToSpeak,
         language: lesson.languageId,
       });
       return response.json();
     },
-    onSuccess: (data) => {
-      if (data.audioUrl) {
-        const audio = new Audio(data.audioUrl);
-        audio.play();
-      }
+    onError: (error) => {
+      console.error("Error playing audio:", error);
     },
   });
 

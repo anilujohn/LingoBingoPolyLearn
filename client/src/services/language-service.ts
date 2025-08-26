@@ -6,13 +6,15 @@ export class LanguageService {
     languageCode: string,
     level: string,
     category: string,
-    count: number = 5
+    count: number = 5,
+    model?: "gemini-2.5-flash" | "gemini-2.5-pro"
   ): Promise<LessonContent[]> {
     const response = await apiRequest("POST", "/api/languages/generate-content", {
       languageCode,
       level,
       category,
       count,
+      model,
     });
     return response.json();
   }

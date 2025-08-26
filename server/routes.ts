@@ -2,8 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { LanguageService } from "../client/src/services/language-service";
-import { GamificationService } from "../client/src/services/gamification-service";
+import { geminiService, type GeminiConfig } from "./gemini-service";
 
 // Request validation schemas
 const checkAnswerSchema = z.object({
@@ -23,6 +22,7 @@ const generateContentSchema = z.object({
   level: z.string(),
   category: z.string(),
   count: z.number().optional(),
+  model: z.enum(["gemini-2.5-flash", "gemini-2.5-pro"]).optional(),
 });
 
 const translateSchema = z.object({
@@ -136,19 +136,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/languages/generate-content", async (req, res) => {
     try {
-      const { languageCode, level, category, count } = generateContentSchema.parse(req.body);
+      const { languageCode, level, category, count, model } = generateContentSchema.parse(req.body);
       
-      // Mock content generation
-      const mockContent = [
-        {
-          english: "How much does this cost?",
-          target: languageCode === "kn" ? "ಇದು ಎಷ್ಟು ಬೆಲೆ?" : "यह कितना है?",
-          transliteration: languageCode === "kn" ? "idu eshtu bele?" : "yah kitna hai?",
-          context: "Used when asking for the price of items in markets or shops",
-        },
-      ];
+      // Get language details from storage
+      const language = await storage.getAllLanguages()
+        .then(langs => langs.find(l => l.code === languageCode));
       
-      res.json(mockContent);
+      if (!language) {
+        return res.status(404).json({ message: "Language not found" });
+      }
+
+      const config: Partial<GeminiConfig> = model ? { model } : {};
+      
+      const content = await geminiService.generateContent(
+        languageCode,
+        language.name,
+        language.region,
+        level,
+        category,
+        count || 5,
+        config
+      );
+      
+      res.json(content);
     } catch (error) {
       console.error("Error generating content:", error);
       res.status(500).json({ message: "Failed to generate content" });
@@ -159,9 +169,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { text, sourceLang, targetLang } = translateSchema.parse(req.body);
       
-      // Mock translation
-      const translation = `[Translated: ${text}]`;
-      res.json({ translation });
+      const result = await geminiService.translateText(text, sourceLang, targetLang);
+      res.json(result);
     } catch (error) {
       console.error("Error translating text:", error);
       res.status(500).json({ message: "Failed to translate text" });
@@ -197,18 +206,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/languages/check-answer", async (req, res) => {
     try {
       const { userAnswer, correctAnswer, context } = req.body;
+      const mode = req.body.mode || "general";
       
-      // Simple answer checking logic
-      const isCorrect = userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
-      const feedback = isCorrect 
-        ? "Excellent! That's correct." 
-        : `Not quite right. The correct answer is: ${correctAnswer}`;
+      const result = await geminiService.checkAnswer(
+        userAnswer,
+        correctAnswer,
+        context,
+        mode
+      );
       
-      res.json({
-        isCorrect,
-        feedback,
-        score: isCorrect ? 100 : 50,
-      });
+      res.json(result);
     } catch (error) {
       console.error("Error checking answer:", error);
       res.status(500).json({ message: "Failed to check answer" });
@@ -219,10 +226,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/lessons/current/:languageId/:mode", async (req, res) => {
     try {
       const { languageId, mode } = req.params;
-      const lesson = await storage.getCurrentLesson("user-1", languageId, mode);
+      let lesson = await storage.getCurrentLesson("user-1", languageId, mode);
       
       if (!lesson) {
         return res.status(404).json({ message: "No current lesson found" });
+      }
+
+      // Generate content dynamically if lesson content is empty
+      if (!lesson.content || (Array.isArray(lesson.content) && lesson.content.length === 0)) {
+        const language = await storage.getLanguage(languageId);
+        if (language) {
+          try {
+            const generatedContent = await geminiService.generateContent(
+              language.code,
+              language.name,
+              language.region,
+              lesson.level,
+              lesson.category,
+              3 // Generate 3 sentences per lesson
+            );
+            
+            // Update lesson with generated content
+            lesson = await storage.updateLesson(lesson.id, { content: generatedContent });
+          } catch (error) {
+            console.error("Error generating lesson content:", error);
+            // Fallback to basic content if generation fails
+            lesson.content = [{
+              english: "Welcome to your lesson",
+              target: language.code === "kn" ? "ನಿಮ್ಮ ಪಾಠಕ್ಕೆ ಸ್ವಾಗತ" : "आपके पाठ में स्वागत है",
+              transliteration: language.code === "kn" ? "nimma paathakke swaagata" : "aapke paath mein swaagat hai",
+              context: "General welcome message"
+            }];
+          }
+        }
       }
 
       // Add progress information
@@ -248,19 +284,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Lesson not found" });
       }
 
-      // Mock answer checking
-      const feedback = "Good attempt! Keep practicing to improve your accuracy.";
-      const correct = Math.random() > 0.3; // 70% chance of being correct
+      // Get the specific content item
+      const content = Array.isArray(lesson.content) ? lesson.content[contentIndex] : null;
+      if (!content) {
+        return res.status(400).json({ message: "Invalid content index" });
+      }
+
+      const correctAnswer = mode === "guide" ? content.english : content.target;
+      const context = content.context || `${lesson.category} - ${lesson.level} level`;
+
+      const result = await geminiService.checkAnswer(
+        answer,
+        correctAnswer,
+        context,
+        mode
+      );
       
-      if (correct) {
+      if (result.isCorrect) {
         // Award XP for correct answer
         await storage.updateUserXP("user-1", lesson.xpReward);
       }
 
       res.json({
-        correct,
-        feedback,
-        xpAwarded: correct ? lesson.xpReward : 0,
+        correct: result.isCorrect,
+        feedback: result.feedback,
+        score: result.score,
+        xpAwarded: result.isCorrect ? lesson.xpReward : 0,
       });
     } catch (error) {
       console.error("Error checking lesson answer:", error);

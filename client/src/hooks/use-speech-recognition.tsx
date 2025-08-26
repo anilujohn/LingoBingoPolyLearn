@@ -54,6 +54,8 @@ export default function useSpeechRecognition({
 
       recognition.onresult = (event: SpeechRecognitionEvent) => {
         const result = event.results[0][0].transcript;
+        const confidence = event.results[0][0].confidence;
+        console.log(`Speech recognition result: "${result}" (confidence: ${confidence})`);
         setTranscript(result);
         onResult?.(result);
         setIsListening(false);

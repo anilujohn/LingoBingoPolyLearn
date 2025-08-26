@@ -1,5 +1,8 @@
 import { useLocation } from "wouter";
-import { Headphones, Compass, Mic } from "lucide-react";
+import { Headphones, Compass, Mic, Settings } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface LearningModeSelectorProps {
   currentMode: string;
@@ -32,6 +35,8 @@ const modes = [
 
 export default function LearningModeSelector({ currentMode, languageId }: LearningModeSelectorProps) {
   const [, setLocation] = useLocation();
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<"gemini-2.5-flash" | "gemini-2.5-pro">("gemini-2.5-flash");
 
   const handleModeSelect = (modeId: string) => {
     setLocation(`/learn/${languageId}/${modeId}`);
@@ -60,7 +65,40 @@ export default function LearningModeSelector({ currentMode, languageId }: Learni
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Your Learning Mode</h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">Choose Your Learning Mode</h3>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSettings(!showSettings)}
+            className="text-gray-500 hover:text-gray-700"
+            data-testid="settings-btn"
+          >
+            <Settings size={20} />
+          </Button>
+        </div>
+      </div>
+
+      {showSettings && (
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <label className="text-sm font-medium text-gray-700">AI Model:</label>
+            <Select value={selectedModel} onValueChange={(value: "gemini-2.5-flash" | "gemini-2.5-pro") => setSelectedModel(value)}>
+              <SelectTrigger className="w-48" data-testid="model-selector">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash (Fast)</SelectItem>
+                <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced)</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-gray-500">
+              {selectedModel === "gemini-2.5-flash" ? "Faster responses, good quality" : "Higher quality, slower responses"}
+            </span>
+          </div>
+        </div>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {modes.map((mode) => {

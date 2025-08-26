@@ -40,6 +40,7 @@ export interface IStorage {
   getLesson(id: string): Promise<Lesson | undefined>;
   getLessonsByLanguage(languageId: string, level?: string, mode?: string): Promise<Lesson[]>;
   createLesson(lesson: InsertLesson): Promise<Lesson>;
+  updateLesson(lessonId: string, updates: Partial<Lesson>): Promise<Lesson>;
   getCurrentLesson(userId: string, languageId: string, mode: string): Promise<Lesson | undefined>;
 
   // Achievement operations
@@ -131,7 +132,7 @@ export class MemStorage implements IStorage {
     this.userProgress.set(`${defaultUser.id}-${kannada.id}`, kannadaProgress);
     this.userProgress.set(`${defaultUser.id}-${hindi.id}`, hindiProgress);
 
-    // Create sample lessons
+    // Create sample lessons - content will be generated dynamically
     const sampleLessons: Lesson[] = [
       {
         id: "lesson-1",
@@ -140,21 +141,34 @@ export class MemStorage implements IStorage {
         category: "Shopping & Daily Life",
         level: "basic",
         mode: "listen",
-        content: [
-          {
-            english: "How much does this cost?",
-            target: "ಇದು ಎಷ್ಟು ಬೆಲೆ?",
-            transliteration: "idu eshtu bele?",
-            context: "Used when asking for the price of items in markets or shops",
-          },
-          {
-            english: "It's too expensive",
-            target: "ಇದು ತುಂಬಾ ದುಬಾರಿ",
-            transliteration: "idu tumba dubari",
-            context: "Express that something costs too much",
-          },
-        ] as LessonContent[],
+        content: [], // Will be populated dynamically by Gemini
         duration: 5,
+        xpReward: 10,
+        order: 1,
+        isActive: true,
+      },
+      {
+        id: "lesson-2",
+        languageId: kannada.id,
+        title: "Workplace Communication",
+        category: "Professional",
+        level: "basic",
+        mode: "guide",
+        content: [],
+        duration: 8,
+        xpReward: 15,
+        order: 2,
+        isActive: true,
+      },
+      {
+        id: "lesson-3",
+        languageId: hindi.id,
+        title: "Travel & Transportation",
+        category: "Travel",
+        level: "basic",
+        mode: "listen",
+        content: [],
+        duration: 6,
         xpReward: 10,
         order: 1,
         isActive: true,
@@ -326,6 +340,15 @@ export class MemStorage implements IStorage {
   async getCurrentLesson(userId: string, languageId: string, mode: string): Promise<Lesson | undefined> {
     const lessons = await this.getLessonsByLanguage(languageId, "basic", mode);
     return lessons[0]; // Return first lesson for now
+  }
+
+  async updateLesson(lessonId: string, updates: Partial<Lesson>): Promise<Lesson> {
+    const existing = this.lessons.get(lessonId);
+    if (!existing) throw new Error("Lesson not found");
+    
+    const updated = { ...existing, ...updates };
+    this.lessons.set(lessonId, updated);
+    return updated;
   }
 
   async getAllAchievements(): Promise<Achievement[]> {
