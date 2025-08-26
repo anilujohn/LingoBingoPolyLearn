@@ -282,21 +282,20 @@ Provide:
 1. Word-by-word breakdown with meanings and transliteration
 2. One enhanced practical tip
 
-For the "quickTip" value, provide ONE practical tip that helps learners use this language effectively in real-world ${regionContext} situations. Choose the MOST helpful approach from these options:
+For the "quickTip" value, provide ONE concise, practical language tip. Focus on:
+- Simple grammar patterns or word usage
+- Formal vs informal alternatives 
+- Common mistakes learners make
+- Easy memory aids or patterns
+- What responses to expect
 
-**Context-Aware Tips**: Specific advice for the scenario (transportation, food, work, shopping, etc.)
-**Social Context**: When/how to use formal vs informal language, cultural appropriateness
-**Mistake Prevention**: Common errors learners make with this pattern and how to avoid them
-**Memory Aids**: Easy patterns or word-building rules that apply broadly
-**Expected Responses**: What people typically say back when you use this phrase
+Keep it short (1-2 sentences max) and language-focused. Avoid cultural advice or lengthy explanations.
 
-IMPORTANT RULES:
+RULES:
 - Use ONLY Roman script transliteration, NO ${languageName} script
 - Wrap transliterated words in **bold** markdown
-- Avoid technical grammar terms (participle, dative, etc.)
-- Focus on practical, immediately usable advice
-- Keep it conversational and encouraging
-- Make it specific to ${regionContext} culture when relevant
+- No technical grammar terms
+- Focus purely on language usage, not cultural context
 
 ${includeTranslation ? `Also provide:
 - translation: The target language text in native script
