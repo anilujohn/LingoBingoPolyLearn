@@ -44,6 +44,11 @@ interface QuickTipCardProps {
   quickTip?: string;
 }
 
+// Helper function to convert markdown bold to HTML
+function renderMarkdownBold(text: string): string {
+  return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+}
+
 export function QuickTipCard({ quickTip }: QuickTipCardProps) {
   // Only render if quickTip exists and has meaningful content
   if (!quickTip || !quickTip.trim() || quickTip.includes("will appear here")) {
@@ -56,9 +61,10 @@ export function QuickTipCard({ quickTip }: QuickTipCardProps) {
         <CardTitle className="text-blue-900 text-base">Quick Tip</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-blue-800 text-sm">
-          {quickTip}
-        </p>
+        <p 
+          className="text-blue-800 text-sm"
+          dangerouslySetInnerHTML={{ __html: renderMarkdownBold(quickTip) }}
+        />
       </CardContent>
     </Card>
   );

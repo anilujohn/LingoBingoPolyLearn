@@ -270,13 +270,16 @@ Return ONLY a JSON object with this structure:
     }>;
     quickTip?: string;
   }> {
-    const prompt = `Analyze: "${englishText}" = "${targetText}"
+    const prompt = `Analyze this language learning pair:
 
-Provide word meanings and one simple usage tip.
+English: "${englishText}"
+Target (${languageCode}): "${targetText}"
 
-For quickTip: Give ONE practical example of how to use a word from this sentence in a different situation. Keep it simple and use only Roman script with **bold** for transliterated words. No technical terms.
+Provide:
+1. Word-by-word breakdown with meanings and transliteration
+2. One practical usage tip about a word or pattern from the sentence
 
-Example tip format: "The word **namaste** means hello. You can also say **namaste sir** when meeting elders or **namaste madam** for women."
+For the "quickTip" value, provide one practical usage tip about a word or pattern from the sentence. Explain the pattern in simple terms and give another example of how the user could use this pattern. **Strictly avoid technical grammar terms** like 'participle', 'allomorph', 'dative case', etc. In this "quickTip" section, you **MUST NOT** use ${languageCode === 'kn' ? 'Kannada' : 'Hindi'} script. Only use the transliterated Roman script and make sure to wrap any transliterated words in **bold** markdown.
 
 ${includeTranslation ? `Also provide:
 - translation: The target language text in native script
