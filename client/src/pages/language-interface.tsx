@@ -51,6 +51,11 @@ export default function LanguageInterface() {
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
   const [contentIndex, setContentIndex] = useState(0);
   const [generatedContent, setGeneratedContent] = useState<LessonContent[]>([]);
+  
+  // Content cache to avoid regenerating when switching modes
+  const [contentCache, setContentCache] = useState<{
+    [key: string]: LessonContent[]; // key format: "languageCode-level-mode"
+  }>({});
 
   // Dynamic title state
   const [languageTitle, setLanguageTitle] = useState<string>('');
@@ -106,7 +111,7 @@ export default function LanguageInterface() {
     }
   }, [language]);
 
-  // Clear content when switching functionalities
+  // Clear content when switching functionalities (but preserve cache)
   useEffect(() => {
     setInputText("");
     setTranslationResult(null);
@@ -114,9 +119,8 @@ export default function LanguageInterface() {
     setShowGuidance(false);
     setGuidedFeedback(null);
     setShowCorrectAnswer(false);
-    setCurrentContent(null);
-    setGeneratedContent([]);
-    setContentIndex(0);
+    // Don't clear currentContent and generatedContent - let mutation handle it
+    // Don't clear contentIndex - let mutation handle it
   }, [functionality, level, learningMode]);
 
   // Auto-generate content when learn mode settings change
@@ -149,9 +153,17 @@ export default function LanguageInterface() {
     },
   });
 
-  // Generate content mutation for learn mode
+  // Generate content mutation for learn mode with caching
   const generateContentMutation = useMutation({
     mutationFn: async () => {
+      const cacheKey = `${language?.code}-${level}-${learningMode}`;
+      
+      // Check cache first
+      if (contentCache[cacheKey] && contentCache[cacheKey].length > 0) {
+        return contentCache[cacheKey];
+      }
+      
+      // Generate new content if not cached
       const response = await apiRequest("POST", "/api/languages/generate-content", {
         languageCode: language?.code,
         level,
@@ -161,6 +173,16 @@ export default function LanguageInterface() {
       return response.json();
     },
     onSuccess: (data: LessonContent[]) => {
+      const cacheKey = `${language?.code}-${level}-${learningMode}`;
+      
+      // Update cache if this was newly generated content
+      if (!contentCache[cacheKey] || contentCache[cacheKey].length === 0) {
+        setContentCache(prev => ({
+          ...prev,
+          [cacheKey]: data
+        }));
+      }
+      
       setGeneratedContent(data);
       setCurrentContent(data[0]);
       setContentIndex(0);
