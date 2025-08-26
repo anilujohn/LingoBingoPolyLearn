@@ -253,6 +253,94 @@ Return ONLY a JSON object with this structure:
     return descriptions[level] || "General level";
   }
 
+  // Unified method for analyzing text pairs and generating Quick Tips
+  async analyzeTextPair(
+    englishText: string,
+    targetText: string,
+    languageCode: string,
+    includeTranslation: boolean = false,
+    config: Partial<GeminiConfig> = {}
+  ): Promise<{
+    translation?: string;
+    transliteration?: string;
+    wordMeanings?: Array<{
+      word: string;
+      meaning: string;
+      transliteration?: string;
+    }>;
+    quickTip?: string;
+  }> {
+    const prompt = `Analyze: "${englishText}" = "${targetText}"
+
+Provide word meanings and one simple usage tip.
+
+For quickTip: Give ONE practical example of how to use a word from this sentence in a different situation. Keep it simple and use only Roman script with **bold** for transliterated words. No technical terms.
+
+Example tip format: "The word **namaste** means hello. You can also say **namaste sir** when meeting elders or **namaste madam** for women."
+
+${includeTranslation ? `Also provide:
+- translation: The target language text in native script
+- transliteration: Roman script version
+
+` : ''}JSON format:
+{
+  ${includeTranslation ? '"translation": "Native script text",\n  "transliteration": "Roman script version",\n  ' : ''}"wordMeanings": [
+    {
+      "word": "target word",
+      "meaning": "English meaning",
+      "transliteration": "roman script"
+    }
+  ],
+  "quickTip": "Simple practical tip with examples using **bold** for transliterated words"
+}`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              ...(includeTranslation && {
+                translation: { type: "string" },
+                transliteration: { type: "string" }
+              }),
+              wordMeanings: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    word: { type: "string" },
+                    meaning: { type: "string" },
+                    transliteration: { type: "string" }
+                  },
+                  required: ["word", "meaning"]
+                }
+              },
+              quickTip: { type: "string" }
+            },
+            ...(includeTranslation && {
+              required: ["translation"]
+            })
+          }
+        }
+      });
+
+      const jsonText = response.text;
+      if (!jsonText) {
+        return {};
+      }
+
+      return JSON.parse(jsonText);
+    } catch (error) {
+      console.error("Error analyzing text pair:", error);
+      return {};
+    }
+  }
+
+  // For backward compatibility - translates and analyzes
   async translateWithAnalysis(
     text: string,
     sourceLang: string,
@@ -269,74 +357,24 @@ Return ONLY a JSON object with this structure:
     }>;
     quickTip?: string;
   }> {
-    const modelConfig = { ...this.defaultConfig, ...config };
+    // First translate the text
+    const translation = await this.translateText(text, sourceLang, targetLang, config);
     
-    const prompt = `You are a language learning expert. Translate the following text from ${sourceLang} to ${targetLang} and provide detailed analysis.
-
-Text to translate: "${text}"
-
-Provide a comprehensive translation analysis including:
-1. Accurate translation in native script
-2. Transliteration in Roman script
-3. Word-by-word breakdown with meanings
-4. Cultural or linguistic tip about the usage
-
-Return ONLY a JSON object with this structure:
-{
-  "translation": "Native script translation",
-  "transliteration": "Roman script transliteration",
-  "wordMeanings": [
-    {
-      "word": "original word",
-      "meaning": "meaning in English",
-      "transliteration": "roman script of translated word"
-    }
-  ],
-  "quickTip": "Cultural tip or linguistic nuance about this phrase"
-}
-
-Make the analysis practical and helpful for language learners.`;
-
-    try {
-      const response = await this.ai.models.generateContent({
-        model: modelConfig.model,
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              translation: { type: "string" },
-              transliteration: { type: "string" },
-              wordMeanings: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    word: { type: "string" },
-                    meaning: { type: "string" },
-                    transliteration: { type: "string" }
-                  },
-                  required: ["word", "meaning"]
-                }
-              },
-              quickTip: { type: "string" }
-            },
-            required: ["translation"]
-          }
-        }
-      });
-
-      const jsonText = response.text;
-      if (!jsonText) {
-        throw new Error("No translation analysis generated");
-      }
-
-      return JSON.parse(jsonText);
-    } catch (error) {
-      console.error("Error generating detailed translation:", error);
-      throw new Error(`Failed to analyze translation: ${error}`);
-    }
+    // Then analyze the English-Target pair using unified method
+    const analysis = await this.analyzeTextPair(
+      text,
+      translation.translation,
+      languageCode,
+      true,
+      config
+    );
+    
+    return {
+      translation: translation.translation,
+      transliteration: translation.transliteration || analysis.transliteration,
+      wordMeanings: analysis.wordMeanings,
+      quickTip: analysis.quickTip
+    };
   }
 
   async checkAnswerDetailed(
@@ -404,6 +442,7 @@ Return ONLY a JSON object with this structure:
     }
   }
 
+  // For backward compatibility - use unified method
   async analyzeWordsForLearning(
     englishText: string,
     targetText: string,
@@ -416,63 +455,7 @@ Return ONLY a JSON object with this structure:
     }>;
     quickTip?: string;
   }> {
-    const prompt = `Analyze: "${englishText}" = "${targetText}"
-
-Provide word meanings and one simple usage tip.
-
-For quickTip: Give ONE practical example of how to use a word from this sentence in a different situation. Keep it simple and use only Roman script with **bold** for transliterated words. No technical terms.
-
-Example tip format: "The word **namaste** means hello. You can also say **namaste sir** when meeting elders or **namaste madam** for women."
-
-JSON format:
-{
-  "wordMeanings": [
-    {
-      "word": "target word",
-      "meaning": "English meaning",
-      "transliteration": "roman script"
-    }
-  ],
-  "quickTip": "Simple practical tip with examples using **bold** for transliterated words"
-}`;
-
-    try {
-      const response = await this.ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              wordMeanings: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    word: { type: "string" },
-                    meaning: { type: "string" },
-                    transliteration: { type: "string" }
-                  },
-                  required: ["word", "meaning"]
-                }
-              },
-              quickTip: { type: "string" }
-            }
-          }
-        }
-      });
-
-      const jsonText = response.text;
-      if (!jsonText) {
-        return {};
-      }
-
-      return JSON.parse(jsonText);
-    } catch (error) {
-      console.error("Error analyzing words for learning:", error);
-      return {};
-    }
+    return this.analyzeTextPair(englishText, targetText, languageCode, false);
   }
 
   async generateLanguageTitle(languageCode: string, languageName: string): Promise<string> {
