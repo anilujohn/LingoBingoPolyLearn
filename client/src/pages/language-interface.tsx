@@ -721,6 +721,47 @@ export default function LanguageInterface() {
                   </CardContent>
                 </Card>
 
+                {/* Word Meanings and Quick Tip for Lazy Listen Mode */}
+                {learningMode === 'lazy-listen' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Word Meanings</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {(currentContent as any).wordMeanings && (currentContent as any).wordMeanings.length > 0 ? (
+                          <div className="space-y-1">
+                            {(currentContent as any).wordMeanings.map((word: any, index: number) => (
+                              <div key={index} className="text-sm p-2 bg-gray-50 rounded-md border-l-4 border-blue-300">
+                                <span className="font-semibold text-black">{word.word}</span>
+                                {word.transliteration && (
+                                  <span className="font-bold text-blue-700"> ({word.transliteration})</span>
+                                )}
+                                <span className="text-gray-800 ml-2">→ {word.meaning}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-600">Loading word analysis...</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    {(currentContent as any).quickTip && (currentContent as any).quickTip.trim() && !(currentContent as any).quickTip.includes("will appear here") && (
+                      <Card className="bg-blue-50 border-blue-200">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-blue-900 text-base">Quick Tip</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-blue-800 text-sm">
+                            {(currentContent as any).quickTip}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )}
+
                 {/* Guidance Section */}
                 {showGuidance && guidedFeedback && (
                   <Card className="bg-blue-50 border-blue-200">

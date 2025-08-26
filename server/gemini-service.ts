@@ -391,24 +391,16 @@ Return ONLY a JSON object with this structure:
     }>;
     quickTip?: string;
   }> {
-    const prompt = `Analyze this language learning pair for fascinating cultural and linguistic insights:
+    const prompt = `Analyze this language learning pair:
 
 English: "${englishText}"
 Target (${languageCode}): "${targetText}"
 
 Provide:
 1. Word-by-word breakdown with meanings and transliteration
-2. A captivating Quick Tip that reveals the cultural soul and linguistic beauty of the language
+2. One practical usage tip about a word or pattern from the sentence
 
-For the Quick Tip, craft something genuinely interesting that:
-- Reveals hidden cultural values embedded in the language structure
-- Shows fascinating linguistic peculiarities unique to this language family
-- Explains how historical/social factors shaped this particular expression
-- Uncovers beautiful metaphors or worldview differences reflected in word choices
-- Highlights surprising connections to regional customs, beliefs, or social hierarchies
-- Demonstrates how speakers think differently due to their language structure
-
-Make it a "wow, I never knew that!" moment - something culturally enriching and linguistically fascinating that learners will remember and want to share with others. Avoid dry grammar rules - focus on the cultural story behind the language.
+For the "quickTip" value, provide one practical usage tip about a word or pattern from the sentence. Explain the pattern in simple terms and give another example of how the user could use this pattern. **Strictly avoid technical grammar terms** like 'participle', 'allomorph', 'dative case', etc. In this "quickTip" section, you **MUST NOT** use ${languageCode === 'kn' ? 'Kannada' : 'Hindi'} script. Only use the transliterated Roman script and make sure to wrap any transliterated words in **bold** markdown.
 
 Return ONLY a JSON object:
 {
@@ -416,10 +408,10 @@ Return ONLY a JSON object:
     {
       "word": "target language word",
       "meaning": "English meaning", 
-      "transliteration": "roman script (if applicable)"
+      "transliteration": "roman script"
     }
   ],
-  "quickTip": "A fascinating cultural or linguistic insight that reveals the unique worldview, values, or thought patterns embedded in this language - something genuinely interesting and memorable"
+  "quickTip": "A practical tip about using a word or pattern, with examples, using only Roman script with **bold** for transliterated words"
 }`;
 
     try {
