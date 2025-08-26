@@ -270,6 +270,9 @@ Return ONLY a JSON object with this structure:
     }>;
     quickTip?: string;
   }> {
+    const languageName = languageCode === 'kn' ? 'Kannada' : 'Hindi';
+    const regionContext = languageCode === 'kn' ? 'Karnataka/Bangalore' : 'India';
+    
     const prompt = `Analyze this language learning pair:
 
 English: "${englishText}"
@@ -277,9 +280,23 @@ Target (${languageCode}): "${targetText}"
 
 Provide:
 1. Word-by-word breakdown with meanings and transliteration
-2. One practical usage tip about a word or pattern from the sentence
+2. One enhanced practical tip
 
-For the "quickTip" value, provide one practical usage tip about a word or pattern from the sentence. Explain the pattern in simple terms and give another example of how the user could use this pattern. **Strictly avoid technical grammar terms** like 'participle', 'allomorph', 'dative case', etc. In this "quickTip" section, you **MUST NOT** use ${languageCode === 'kn' ? 'Kannada' : 'Hindi'} script. Only use the transliterated Roman script and make sure to wrap any transliterated words in **bold** markdown.
+For the "quickTip" value, provide ONE practical tip that helps learners use this language effectively in real-world ${regionContext} situations. Choose the MOST helpful approach from these options:
+
+**Context-Aware Tips**: Specific advice for the scenario (transportation, food, work, shopping, etc.)
+**Social Context**: When/how to use formal vs informal language, cultural appropriateness
+**Mistake Prevention**: Common errors learners make with this pattern and how to avoid them
+**Memory Aids**: Easy patterns or word-building rules that apply broadly
+**Expected Responses**: What people typically say back when you use this phrase
+
+IMPORTANT RULES:
+- Use ONLY Roman script transliteration, NO ${languageName} script
+- Wrap transliterated words in **bold** markdown
+- Avoid technical grammar terms (participle, dative, etc.)
+- Focus on practical, immediately usable advice
+- Keep it conversational and encouraging
+- Make it specific to ${regionContext} culture when relevant
 
 ${includeTranslation ? `Also provide:
 - translation: The target language text in native script
@@ -294,7 +311,7 @@ ${includeTranslation ? `Also provide:
       "transliteration": "roman script"
     }
   ],
-  "quickTip": "Simple practical tip with examples using **bold** for transliterated words"
+  "quickTip": "Enhanced practical tip with real-world context using **bold** for transliterated words"
 }`;
 
     try {
