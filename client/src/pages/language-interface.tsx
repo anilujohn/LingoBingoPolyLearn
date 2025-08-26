@@ -445,7 +445,7 @@ export default function LanguageInterface() {
                   <Button
                     onClick={() => translateMutation.mutate()}
                     disabled={!inputText.trim() || translateMutation.isPending}
-                    className="flex-1"
+                    className="flex-1 border-2 border-blue-500 hover:border-blue-600 shadow-md"
                     data-testid="translate-btn"
                   >
                     {translateMutation.isPending ? 'Translating...' : 'Translate'}
@@ -470,23 +470,23 @@ export default function LanguageInterface() {
                 {/* Main Translation */}
                 <Card className={`${theme.bgAccent} ${theme.borderAccent} border`}>
                   <CardContent className="p-4">
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <div className="text-center">
-                        <p className="text-sm text-gray-500 mb-2">{translationResult.translation}</p>
+                        <p className="text-sm text-gray-500 mb-1">{translationResult.translation}</p>
                         {translationResult.transliteration && (
-                          <p className="text-2xl font-bold text-black">{translationResult.transliteration}</p>
+                          <div className="flex items-center justify-center gap-3">
+                            <p className="text-2xl font-bold text-black">{translationResult.transliteration}</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => playAudio(translationResult.translation)}
+                              data-testid="pronounce-btn"
+                            >
+                              <Volume2 className="w-4 h-4 mr-1" />
+                              Pronounce
+                            </Button>
+                          </div>
                         )}
-                      </div>
-                      <div className="flex justify-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => playAudio(translationResult.translation)}
-                          data-testid="pronounce-btn"
-                        >
-                          <Volume2 className="w-4 h-4 mr-1" />
-                          Pronounce
-                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -502,12 +502,12 @@ export default function LanguageInterface() {
                       <CardContent>
                         <div className="space-y-1">
                           {translationResult.wordMeanings.map((word, index) => (
-                            <div key={index} className="text-sm">
-                              <span className="font-medium text-black">{word.word}</span>
+                            <div key={index} className="text-sm p-2 bg-gray-50 rounded-md border-l-4 border-blue-300">
+                              <span className="font-semibold text-black">{word.word}</span>
                               {word.transliteration && (
-                                <span className="text-gray-600"> ({word.transliteration})</span>
+                                <span className="font-bold text-blue-700"> ({word.transliteration})</span>
                               )}
-                              <span className="text-gray-700"> - {word.meaning}</span>
+                              <span className="text-gray-800 ml-2">→ {word.meaning}</span>
                             </div>
                           ))}
                         </div>
@@ -534,14 +534,14 @@ export default function LanguageInterface() {
           <div className="space-y-4">
             {/* Modern Segmented Learning Mode Selection */}
             <div className="mb-3">
-              <h3 className="text-sm font-medium mb-2 text-center text-gray-700">Learning Mode</h3>
+              <h3 className="text-sm font-semibold mb-2 text-center text-gray-900">Learning Mode</h3>
               <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
                 <Button
                   variant="ghost"
                   onClick={() => setLearningMode('lazy-listen')}
                   className={`flex-1 text-xs py-2 px-2 rounded-md transition-all ${
                     learningMode === 'lazy-listen' 
-                      ? 'bg-white shadow-sm font-bold text-black' 
+                      ? 'bg-white shadow-md border-2 border-blue-400 font-bold text-black' 
                       : 'hover:bg-white/50 text-gray-700'
                   }`}
                   data-testid="lazy-listen-btn"
@@ -557,7 +557,7 @@ export default function LanguageInterface() {
                   onClick={() => setLearningMode('guided-kn-en')}
                   className={`flex-1 text-xs py-2 px-2 rounded-md transition-all ${
                     learningMode === 'guided-kn-en' 
-                      ? 'bg-white shadow-sm font-bold text-black' 
+                      ? 'bg-white shadow-md border-2 border-blue-400 font-bold text-black' 
                       : 'hover:bg-white/50 text-gray-700'
                   }`}
                   data-testid="guided-kn-en-btn"
@@ -573,7 +573,7 @@ export default function LanguageInterface() {
                   onClick={() => setLearningMode('guided-en-kn')}
                   className={`flex-1 text-xs py-2 px-2 rounded-md transition-all ${
                     learningMode === 'guided-en-kn' 
-                      ? 'bg-white shadow-sm font-bold text-black' 
+                      ? 'bg-white shadow-md border-2 border-blue-400 font-bold text-black' 
                       : 'hover:bg-white/50 text-gray-700'
                   }`}
                   data-testid="guided-en-kn-btn"
@@ -602,7 +602,7 @@ export default function LanguageInterface() {
                 {/* Compact Context Badge */}
                 <div className="text-center">
                   <Badge variant="secondary" className="text-xs">
-                    Topic: {getTopicFromContext(currentContent.context)}
+                    Topic: {getTopicFromContext(currentContent.context || "")}
                   </Badge>
                 </div>
 
@@ -613,21 +613,21 @@ export default function LanguageInterface() {
                       // Lazy Listen Mode
                       <div className="text-center space-y-3">
                         <h3 className="text-base text-black font-medium">{currentContent.english}</h3>
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           <div className="text-center">
-                            <p className="text-sm text-gray-500 mb-2">{currentContent.target}</p>
-                            <p className="text-2xl font-bold text-black">{currentContent.transliteration}</p>
-                          </div>
-                          <div className="flex justify-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => playAudio(currentContent.target)}
-                              data-testid="pronounce-btn"
-                            >
-                              <Volume2 className="w-4 h-4 mr-1" />
-                              Pronounce
-                            </Button>
+                            <p className="text-sm text-gray-500 mb-1">{currentContent.target}</p>
+                            <div className="flex items-center justify-center gap-3">
+                              <p className="text-2xl font-bold text-black">{currentContent.transliteration}</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => playAudio(currentContent.target)}
+                                data-testid="pronounce-btn"
+                              >
+                                <Volume2 className="w-4 h-4 mr-1" />
+                                Pronounce
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -643,17 +643,19 @@ export default function LanguageInterface() {
                             </h3>
                             {learningMode === 'guided-kn-en' && (
                               <div className="mb-3">
-                                <p className="text-sm text-gray-500 mb-2">{currentContent.target}</p>
-                                <p className="text-xl font-bold text-black mb-2">{currentContent.transliteration}</p>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => playAudio(currentContent.target)}
-                                  data-testid="pronounce-kn-btn"
-                                >
-                                  <Volume2 className="w-4 h-4 mr-1" />
-                                  Pronounce
-                                </Button>
+                                <p className="text-sm text-gray-500 mb-1">{currentContent.target}</p>
+                                <div className="flex items-center justify-center gap-3 mb-2">
+                                  <p className="text-xl font-bold text-black">{currentContent.transliteration}</p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => playAudio(currentContent.target)}
+                                    data-testid="pronounce-kn-btn"
+                                  >
+                                    <Volume2 className="w-4 h-4 mr-1" />
+                                    Pronounce
+                                  </Button>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -745,23 +747,21 @@ export default function LanguageInterface() {
                           {learningMode === 'guided-en-kn' && (
                             <div>
                               <p className="text-sm text-green-600 mb-1">{currentContent.target}</p>
-                              <p className="text-lg font-bold text-green-900">{currentContent.transliteration}</p>
+                              <div className="flex items-center justify-center gap-3">
+                                <p className="text-lg font-bold text-green-900">{currentContent.transliteration}</p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => playAudio(currentContent.target)}
+                                  data-testid="pronounce-correct-btn"
+                                >
+                                  <Volume2 className="w-4 h-4 mr-1" />
+                                  Pronounce
+                                </Button>
+                              </div>
                             </div>
                           )}
                         </div>
-                        {learningMode === 'guided-en-kn' && (
-                          <div className="flex justify-center">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => playAudio(currentContent.target)}
-                              data-testid="pronounce-correct-btn"
-                            >
-                              <Volume2 className="w-4 h-4 mr-1" />
-                              Pronounce
-                            </Button>
-                          </div>
-                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -777,12 +777,12 @@ export default function LanguageInterface() {
                       {(currentContent as any).wordMeanings && (currentContent as any).wordMeanings.length > 0 ? (
                         <div className="space-y-1">
                           {(currentContent as any).wordMeanings.map((word: any, index: number) => (
-                            <div key={index} className="text-sm">
-                              <span className="font-medium text-black">{word.word}</span>
+                            <div key={index} className="text-sm p-2 bg-gray-50 rounded-md border-l-4 border-blue-300">
+                              <span className="font-semibold text-black">{word.word}</span>
                               {word.transliteration && (
-                                <span className="text-gray-600"> ({word.transliteration})</span>
+                                <span className="font-bold text-blue-700"> ({word.transliteration})</span>
                               )}
-                              <span className="text-gray-700"> - {word.meaning}</span>
+                              <span className="text-gray-800 ml-2">→ {word.meaning}</span>
                             </div>
                           ))}
                         </div>
