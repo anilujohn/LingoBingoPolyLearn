@@ -391,27 +391,33 @@ Return ONLY a JSON object with this structure:
     }>;
     quickTip?: string;
   }> {
-    const prompt = `Analyze this language learning pair for word-by-word breakdown:
+    const prompt = `Analyze this language learning pair for educational insights:
 
 English: "${englishText}"
 Target (${languageCode}): "${targetText}"
 
-Provide detailed word analysis for language learners:
-1. Break down the target language sentence word-by-word
-2. Explain each word's meaning in English
-3. Provide transliteration for non-Roman scripts
-4. Include a practical learning tip
+Provide:
+1. Word-by-word breakdown with meanings and transliteration
+2. Educational pattern recognition tip that teaches generalizable language rules
 
-Return ONLY a JSON object with this structure:
+For the tip, focus on:
+- Grammar patterns (word endings, verb forms, sentence structure)
+- Common word formations or prefixes/suffixes 
+- Language-specific rules that apply to many similar words
+- Cultural/contextual usage patterns
+
+Make the tip practical and educational, teaching patterns that learners can apply to other sentences.
+
+Return ONLY a JSON object:
 {
   "wordMeanings": [
     {
       "word": "target language word",
-      "meaning": "English meaning",
+      "meaning": "English meaning", 
       "transliteration": "roman script (if applicable)"
     }
   ],
-  "quickTip": "Helpful learning tip about grammar, usage, or cultural context"
+  "quickTip": "Educational insight about grammar patterns, word formations, or language rules that learners can apply more broadly"
 }`;
 
     try {
@@ -450,6 +456,37 @@ Return ONLY a JSON object with this structure:
     } catch (error) {
       console.error("Error analyzing words for learning:", error);
       return {};
+    }
+  }
+
+  async generateLanguageTitle(languageCode: string, languageName: string): Promise<string> {
+    const prompt = `Generate a fun, catchy title for a ${languageName} learning app.
+
+Requirements:
+- Should be witty and relatable to people from that region
+- Use common phrases or expressions people already know
+- Keep it positive and encouraging  
+- Avoid negative connotations
+- Should convey the idea of learning or speaking the language
+- Maximum 4-5 words
+
+Examples of good patterns:
+- Play on common regional expressions
+- Reference popular cultural phrases
+- Use wordplay that natives would appreciate
+
+Return ONLY the title text, nothing else.`;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: prompt }] }]
+      });
+
+      return response.text?.trim() || `Simply ${languageName} Sikho`;
+    } catch (error) {
+      console.error("Error generating language title:", error);
+      return `Simply ${languageName} Sikho`;
     }
   }
 }

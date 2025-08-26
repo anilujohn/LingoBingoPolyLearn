@@ -33,13 +33,8 @@ export default function LanguageInterface() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   
-  // Determine if we're in translate or learn mode
-  const isTranslateMode = location.includes('/translate/');
-  
   // Main functionality state
-  const [functionality, setFunctionality] = useState<'translate' | 'learn'>(
-    isTranslateMode ? 'translate' : 'learn'
-  );
+  const [functionality, setFunctionality] = useState<'translate' | 'learn'>('learn');
   
   // Translate mode state
   const [inputText, setInputText] = useState("");
@@ -55,6 +50,10 @@ export default function LanguageInterface() {
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
   const [contentIndex, setContentIndex] = useState(0);
   const [generatedContent, setGeneratedContent] = useState<LessonContent[]>([]);
+
+  // Dynamic title state
+  const [languageTitle, setLanguageTitle] = useState<string>('');
+  const [languageSubtitle, setLanguageSubtitle] = useState<string>('');
 
   // Fetch language data
   const { data: language } = useQuery<Language>({
@@ -81,6 +80,30 @@ export default function LanguageInterface() {
       });
     },
   });
+
+  // Generate dynamic titles when language changes
+  useEffect(() => {
+    if (language) {
+      const titles = {
+        'kn': { 
+          title: 'Simply Kannada Kali', 
+          subtitle: 'No more "Kannada Gottilla"!' 
+        },
+        'hi': { 
+          title: 'Hindi Seekhiye Aaram Se', 
+          subtitle: 'Ab "Hindi Nahi Aati" Nahi Kahenge!' 
+        }
+      };
+      
+      const titleData = titles[language.code as keyof typeof titles] || {
+        title: `Simply ${language.name} Sikho`,
+        subtitle: `Master ${language.name} step by step!`
+      };
+      
+      setLanguageTitle(titleData.title);
+      setLanguageSubtitle(titleData.subtitle);
+    }
+  }, [language]);
 
   // Clear content when switching functionalities
   useEffect(() => {
@@ -206,7 +229,6 @@ export default function LanguageInterface() {
       setGuidedFeedback(null);
       setShowCorrectAnswer(false);
     } else {
-      // Generate more content
       generateContentMutation.mutate();
     }
   };
@@ -224,8 +246,7 @@ export default function LanguageInterface() {
         bgAccent: 'bg-orange-50',
         textAccent: 'text-orange-900',
         borderAccent: 'border-orange-200',
-        title: 'Simply Kannada Kali',
-        subtitle: 'No more "Kannada Gottilla"!',
+        activeBorder: 'border-orange-500 border-2 shadow-lg',
         translateButton: 'Just Translate (A → ಅ)',
         scripts: { source: 'A', target: 'ಅ' }
       },
@@ -234,13 +255,47 @@ export default function LanguageInterface() {
         bgAccent: 'bg-blue-50',
         textAccent: 'text-blue-900',
         borderAccent: 'border-blue-200',
-        title: 'Simply Hindi Kali',
-        subtitle: 'No more "Hindi Nahi Aata"!',
+        activeBorder: 'border-blue-500 border-2 shadow-lg',
         translateButton: 'Just Translate (A → अ)',
         scripts: { source: 'A', target: 'अ' }
       }
     };
     return themes[langCode as keyof typeof themes] || themes.kn;
+  };
+
+  // Function to extract topic from context
+  const getTopicFromContext = (context: string) => {
+    if (!context) return "GENERAL";
+    
+    // Extract key topic words
+    const topicMappings = {
+      'food': 'FOOD & DINING',
+      'restaurant': 'FOOD & DINING', 
+      'tea': 'FOOD & SOCIAL',
+      'chai': 'FOOD & SOCIAL',
+      'travel': 'TRAVEL',
+      'transport': 'TRANSPORT',
+      'shopping': 'SHOPPING',
+      'market': 'SHOPPING',
+      'family': 'FAMILY',
+      'greet': 'GREETINGS',
+      'hello': 'GREETINGS',
+      'work': 'WORK',
+      'office': 'WORK',
+      'time': 'TIME',
+      'money': 'MONEY',
+      'health': 'HEALTH',
+      'weather': 'WEATHER'
+    };
+
+    const lowerContext = context.toLowerCase();
+    for (const [key, topic] of Object.entries(topicMappings)) {
+      if (lowerContext.includes(key)) {
+        return topic;
+      }
+    }
+    
+    return "CONVERSATION";
   };
 
   if (!language) {
@@ -255,7 +310,7 @@ export default function LanguageInterface() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Compact Header */}
+      {/* Compact Header with Difficulty Level */}
       <header className={`bg-gradient-to-r ${theme.colors} text-white shadow-lg`}>
         <div className="max-w-6xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -268,34 +323,67 @@ export default function LanguageInterface() {
               <ArrowLeft className="w-4 h-4 mr-1" />
               Back
             </Button>
+            
             <div className="text-center flex-1">
-              <h1 className="text-xl font-bold">{theme.title}</h1>
-              <p className="text-sm opacity-90">{theme.subtitle}</p>
+              <h1 className="text-lg font-bold">{languageTitle}</h1>
+              <p className="text-xs opacity-90">{languageSubtitle}</p>
             </div>
-            <div className="w-16"></div> {/* Spacer for balance */}
+            
+            {/* Difficulty Level in Header */}
+            {functionality === 'learn' && (
+              <div className="flex bg-white/10 rounded-lg p-1">
+                <Button
+                  variant="ghost"
+                  onClick={() => setLevel('basic')}
+                  className={`text-xs px-3 py-1 text-white ${
+                    level === 'basic' 
+                      ? 'bg-white/30 font-bold' 
+                      : 'hover:bg-white/20'
+                  }`}
+                  data-testid="basic-level-btn"
+                >
+                  Basic
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setLevel('intermediate')}
+                  className={`text-xs px-3 py-1 text-white ${
+                    level === 'intermediate' 
+                      ? 'bg-white/30 font-bold' 
+                      : 'hover:bg-white/20'
+                  }`}
+                  data-testid="intermediate-level-btn"
+                >
+                  Intermediate
+                </Button>
+              </div>
+            )}
+            
+            {functionality === 'translate' && (
+              <div className="w-24"></div> // Spacer for balance
+            )}
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-4">
-        {/* Functionality Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* Functionality Selection - More Compact */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
           <Card 
             className={`cursor-pointer transition-all ${
               functionality === 'learn' 
-                ? `ring-2 ring-orange-400 ${theme.bgAccent}` 
-                : 'hover:shadow-md'
+                ? theme.activeBorder
+                : 'border hover:shadow-md'
             }`}
             onClick={() => setFunctionality('learn')}
             data-testid="learn-section"
           >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center justify-between">
+            <CardHeader className="pb-2 pt-3">
+              <CardTitle className={`text-sm ${
+                functionality === 'learn' ? 'font-bold' : 'font-medium'
+              }`}>
                 Learn with Examples
-                {functionality === 'learn' && (
-                  <Badge variant="default" className="text-xs">Active</Badge>
-                )}
               </CardTitle>
               <p className="text-xs text-gray-600">
                 Practice with AI-generated sentences
@@ -306,18 +394,17 @@ export default function LanguageInterface() {
           <Card 
             className={`cursor-pointer transition-all ${
               functionality === 'translate' 
-                ? `ring-2 ring-orange-400 ${theme.bgAccent}` 
-                : 'hover:shadow-md'
+                ? theme.activeBorder
+                : 'border hover:shadow-md'
             }`}
             onClick={() => setFunctionality('translate')}
             data-testid="translate-section"
           >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center justify-between">
+            <CardHeader className="pb-2 pt-3">
+              <CardTitle className={`text-sm ${
+                functionality === 'translate' ? 'font-bold' : 'font-medium'
+              }`}>
                 {theme.translateButton}
-                {functionality === 'translate' && (
-                  <Badge variant="default" className="text-xs">Active</Badge>
-                )}
               </CardTitle>
               <p className="text-xs text-gray-600">
                 Instant translation with word meanings
@@ -332,7 +419,7 @@ export default function LanguageInterface() {
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Translate to {language.name}</CardTitle>
+                <CardTitle className="text-base">Translate to {language.name}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="relative">
@@ -442,87 +529,63 @@ export default function LanguageInterface() {
         ) : (
           /* Learn with Examples */
           <div className="space-y-4">
-            {/* Compact Level and Mode Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Level Selection */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Difficulty Level</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant={level === 'basic' ? 'default' : 'outline'}
-                      onClick={() => setLevel('basic')}
-                      className="flex-1 h-auto py-2"
-                      data-testid="basic-level-btn"
-                    >
-                      <div className="text-center">
-                        <div className="font-semibold text-sm">Basic</div>
-                        <div className="text-xs opacity-80">≤5 words</div>
-                      </div>
-                    </Button>
-                    <Button
-                      variant={level === 'intermediate' ? 'default' : 'outline'}
-                      onClick={() => setLevel('intermediate')}
-                      className="flex-1 h-auto py-2"
-                      data-testid="intermediate-level-btn"
-                    >
-                      <div className="text-center">
-                        <div className="font-semibold text-sm">Intermediate</div>
-                        <div className="text-xs opacity-80">6-15 words</div>
-                      </div>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Learning Mode Selection */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Learning Mode</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-1">
-                    <Button
-                      variant={learningMode === 'lazy-listen' ? 'default' : 'outline'}
-                      onClick={() => setLearningMode('lazy-listen')}
-                      className="h-auto py-1 px-1"
-                      data-testid="lazy-listen-btn"
-                    >
-                      <div className="text-center">
-                        <div className="font-semibold text-xs">Lazy Listen</div>
-                        <div className="text-xs opacity-80">({theme.scripts.source} → {theme.scripts.target})</div>
-                      </div>
-                    </Button>
-                    
-                    <Button
-                      variant={learningMode === 'guided-kn-en' ? 'default' : 'outline'}
-                      onClick={() => setLearningMode('guided-kn-en')}
-                      className="h-auto py-1 px-1"
-                      data-testid="guided-kn-en-btn"
-                    >
-                      <div className="text-center">
-                        <div className="font-semibold text-xs">Guided</div>
-                        <div className="text-xs opacity-80">({theme.scripts.target} → {theme.scripts.source})</div>
-                      </div>
-                    </Button>
-                    
-                    <Button
-                      variant={learningMode === 'guided-en-kn' ? 'default' : 'outline'}
-                      onClick={() => setLearningMode('guided-en-kn')}
-                      className="h-auto py-1 px-1"
-                      data-testid="guided-en-kn-btn"
-                    >
-                      <div className="text-center">
-                        <div className="font-semibold text-xs">Guided</div>
-                        <div className="text-xs opacity-80">({theme.scripts.source} → {theme.scripts.target})</div>
-                      </div>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Compact Learning Mode Selection */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Learning Mode</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setLearningMode('lazy-listen')}
+                    className={`h-auto py-2 px-2 text-center ${
+                      learningMode === 'lazy-listen' 
+                        ? `${theme.activeBorder} font-bold` 
+                        : ''
+                    }`}
+                    data-testid="lazy-listen-btn"
+                  >
+                    <div>
+                      <div className="text-xs font-medium">Lazy Listen</div>
+                      <div className="text-xs opacity-70">({theme.scripts.source} → {theme.scripts.target})</div>
+                    </div>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => setLearningMode('guided-kn-en')}
+                    className={`h-auto py-2 px-2 text-center ${
+                      learningMode === 'guided-kn-en' 
+                        ? `${theme.activeBorder} font-bold` 
+                        : ''
+                    }`}
+                    data-testid="guided-kn-en-btn"
+                  >
+                    <div>
+                      <div className="text-xs font-medium">Guided</div>
+                      <div className="text-xs opacity-70">({theme.scripts.target} → {theme.scripts.source})</div>
+                    </div>
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => setLearningMode('guided-en-kn')}
+                    className={`h-auto py-2 px-2 text-center ${
+                      learningMode === 'guided-en-kn' 
+                        ? `${theme.activeBorder} font-bold` 
+                        : ''
+                    }`}
+                    data-testid="guided-en-kn-btn"
+                  >
+                    <div>
+                      <div className="text-xs font-medium">Guided</div>
+                      <div className="text-xs opacity-70">({theme.scripts.source} → {theme.scripts.target})</div>
+                    </div>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Loading State */}
             {generateContentMutation.isPending && (
@@ -537,10 +600,10 @@ export default function LanguageInterface() {
             {/* Learning Content */}
             {currentContent && !generateContentMutation.isPending && (
               <div className="space-y-3">
-                {/* Context Badge */}
+                {/* Compact Context Badge */}
                 <div className="text-center">
                   <Badge variant="secondary" className="text-xs">
-                    {currentContent.context?.toUpperCase() || 'GENERAL CONVERSATION'}
+                    Topic: {getTopicFromContext(currentContent.context)}
                   </Badge>
                 </div>
 
@@ -720,11 +783,11 @@ export default function LanguageInterface() {
                   
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Quick Tip</CardTitle>
+                      <CardTitle className="text-base">Learning Pattern</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-xs text-gray-700">
-                        {(currentContent as any).quickTip || currentContent.context}
+                        {(currentContent as any).quickTip || "Educational tip will appear here..."}
                       </p>
                     </CardContent>
                   </Card>
