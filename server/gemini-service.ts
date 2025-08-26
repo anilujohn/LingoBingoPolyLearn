@@ -391,22 +391,24 @@ Return ONLY a JSON object with this structure:
     }>;
     quickTip?: string;
   }> {
-    const prompt = `Analyze this language learning pair for educational insights:
+    const prompt = `Analyze this language learning pair for fascinating cultural and linguistic insights:
 
 English: "${englishText}"
 Target (${languageCode}): "${targetText}"
 
 Provide:
 1. Word-by-word breakdown with meanings and transliteration
-2. Educational pattern recognition tip that teaches generalizable language rules
+2. A captivating Quick Tip that reveals the cultural soul and linguistic beauty of the language
 
-For the tip, focus on:
-- Grammar patterns (word endings, verb forms, sentence structure)
-- Common word formations or prefixes/suffixes 
-- Language-specific rules that apply to many similar words
-- Cultural/contextual usage patterns
+For the Quick Tip, craft something genuinely interesting that:
+- Reveals hidden cultural values embedded in the language structure
+- Shows fascinating linguistic peculiarities unique to this language family
+- Explains how historical/social factors shaped this particular expression
+- Uncovers beautiful metaphors or worldview differences reflected in word choices
+- Highlights surprising connections to regional customs, beliefs, or social hierarchies
+- Demonstrates how speakers think differently due to their language structure
 
-Make the tip practical and educational, teaching patterns that learners can apply to other sentences.
+Make it a "wow, I never knew that!" moment - something culturally enriching and linguistically fascinating that learners will remember and want to share with others. Avoid dry grammar rules - focus on the cultural story behind the language.
 
 Return ONLY a JSON object:
 {
@@ -417,7 +419,7 @@ Return ONLY a JSON object:
       "transliteration": "roman script (if applicable)"
     }
   ],
-  "quickTip": "Educational insight about grammar patterns, word formations, or language rules that learners can apply more broadly"
+  "quickTip": "A fascinating cultural or linguistic insight that reveals the unique worldview, values, or thought patterns embedded in this language - something genuinely interesting and memorable"
 }`;
 
     try {

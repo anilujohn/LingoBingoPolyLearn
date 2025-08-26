@@ -607,16 +607,15 @@ export default function LanguageInterface() {
             {/* Learning Content */}
             {currentContent && !generateContentMutation.isPending && (
               <div className="space-y-3">
-                {/* Compact Context Badge */}
-                <div className="text-center">
-                  <Badge variant="secondary" className="text-xs">
-                    Topic: {getTopicFromContext(currentContent.context || "")}
-                  </Badge>
-                </div>
-
                 {/* Main Learning Card */}
                 <Card className={`${theme.bgAccent} ${theme.borderAccent} border`}>
                   <CardContent className="p-4">
+                    {/* Topic Badge moved inside card at top left */}
+                    <div className="flex justify-start mb-3">
+                      <Badge variant="secondary" className="text-xs">
+                        Topic: {getTopicFromContext(currentContent.context || "")}
+                      </Badge>
+                    </div>
                     {learningMode === 'lazy-listen' ? (
                       // Lazy Listen Mode
                       <div className="text-center space-y-3">
@@ -704,7 +703,7 @@ export default function LanguageInterface() {
                           <Button
                             onClick={() => checkAnswerMutation.mutate()}
                             disabled={!userAnswer.trim() || checkAnswerMutation.isPending}
-                            className="flex-1"
+                            className="flex-1 border-2 border-blue-500 hover:border-blue-600 shadow-md"
                             data-testid="check-answer-btn"
                           >
                             {checkAnswerMutation.isPending ? 'Checking...' : 'Check Answer'}
