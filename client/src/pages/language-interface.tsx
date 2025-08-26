@@ -360,7 +360,7 @@ export default function LanguageInterface() {
             )}
             
             {functionality === 'translate' && (
-              <div className="w-24"></div> // Spacer for balance
+              <div className="w-24"></div>
             )}
           </div>
         </div>
@@ -470,128 +470,127 @@ export default function LanguageInterface() {
                 {/* Main Translation */}
                 <Card className={`${theme.bgAccent} ${theme.borderAccent} border`}>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xl font-medium">{translationResult.translation}</p>
+                    <div className="space-y-3">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-500 mb-2">{translationResult.translation}</p>
                         {translationResult.transliteration && (
-                          <p className="text-base text-gray-600">{translationResult.transliteration}</p>
+                          <p className="text-2xl font-bold text-black">{translationResult.transliteration}</p>
                         )}
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => playAudio(translationResult.translation)}
-                        data-testid="pronounce-btn"
-                      >
-                        <Volume2 className="w-4 h-4 mr-1" />
-                        Pronounce
-                      </Button>
+                      <div className="flex justify-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => playAudio(translationResult.translation)}
+                          data-testid="pronounce-btn"
+                        >
+                          <Volume2 className="w-4 h-4 mr-1" />
+                          Pronounce
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Word Meanings */}
-                {translationResult.wordMeanings && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Word Meanings</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-1">
-                        {translationResult.wordMeanings.map((word, index) => (
-                          <div key={index} className="text-sm">
-                            <span className="font-medium">{word.word}</span>
-                            {word.transliteration && (
-                              <span className="text-gray-600"> ({word.transliteration})</span>
-                            )}
-                            <span className="text-gray-700"> - {word.meaning}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                {/* Word Meanings & Quick Tip */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {translationResult.wordMeanings && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Word Meanings</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-1">
+                          {translationResult.wordMeanings.map((word, index) => (
+                            <div key={index} className="text-sm">
+                              <span className="font-medium text-black">{word.word}</span>
+                              {word.transliteration && (
+                                <span className="text-gray-600"> ({word.transliteration})</span>
+                              )}
+                              <span className="text-gray-700"> - {word.meaning}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                {/* Quick Tip */}
-                {translationResult.quickTip && (
-                  <Card className="bg-blue-50 border-blue-200">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-blue-900 text-base">Quick Tip</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-blue-800 text-sm">{translationResult.quickTip}</p>
-                    </CardContent>
-                  </Card>
-                )}
+                  {translationResult.quickTip && (
+                    <Card className="bg-blue-50 border-blue-200">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-blue-900 text-base">Quick Tip</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-blue-800 text-sm">{translationResult.quickTip}</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </div>
             )}
           </div>
         ) : (
           /* Learn with Examples */
           <div className="space-y-4">
-            {/* Compact Learning Mode Selection */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Learning Mode</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setLearningMode('lazy-listen')}
-                    className={`h-auto py-2 px-2 text-center ${
-                      learningMode === 'lazy-listen' 
-                        ? `${theme.activeBorder} font-bold` 
-                        : ''
-                    }`}
-                    data-testid="lazy-listen-btn"
-                  >
-                    <div>
-                      <div className="text-xs font-medium">Lazy Listen</div>
-                      <div className="text-xs opacity-70">({theme.scripts.source} → {theme.scripts.target})</div>
-                    </div>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    onClick={() => setLearningMode('guided-kn-en')}
-                    className={`h-auto py-2 px-2 text-center ${
-                      learningMode === 'guided-kn-en' 
-                        ? `${theme.activeBorder} font-bold` 
-                        : ''
-                    }`}
-                    data-testid="guided-kn-en-btn"
-                  >
-                    <div>
-                      <div className="text-xs font-medium">Guided</div>
-                      <div className="text-xs opacity-70">({theme.scripts.target} → {theme.scripts.source})</div>
-                    </div>
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    onClick={() => setLearningMode('guided-en-kn')}
-                    className={`h-auto py-2 px-2 text-center ${
-                      learningMode === 'guided-en-kn' 
-                        ? `${theme.activeBorder} font-bold` 
-                        : ''
-                    }`}
-                    data-testid="guided-en-kn-btn"
-                  >
-                    <div>
-                      <div className="text-xs font-medium">Guided</div>
-                      <div className="text-xs opacity-70">({theme.scripts.source} → {theme.scripts.target})</div>
-                    </div>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Modern Segmented Learning Mode Selection */}
+            <div className="mb-3">
+              <h3 className="text-sm font-medium mb-2 text-center text-gray-700">Learning Mode</h3>
+              <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
+                <Button
+                  variant="ghost"
+                  onClick={() => setLearningMode('lazy-listen')}
+                  className={`flex-1 text-xs py-2 px-2 rounded-md transition-all ${
+                    learningMode === 'lazy-listen' 
+                      ? 'bg-white shadow-sm font-bold text-black' 
+                      : 'hover:bg-white/50 text-gray-700'
+                  }`}
+                  data-testid="lazy-listen-btn"
+                >
+                  <div className="text-center">
+                    <div className="font-medium">Lazy Listen</div>
+                    <div className="text-xs opacity-70">({theme.scripts.source} → {theme.scripts.target})</div>
+                  </div>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  onClick={() => setLearningMode('guided-kn-en')}
+                  className={`flex-1 text-xs py-2 px-2 rounded-md transition-all ${
+                    learningMode === 'guided-kn-en' 
+                      ? 'bg-white shadow-sm font-bold text-black' 
+                      : 'hover:bg-white/50 text-gray-700'
+                  }`}
+                  data-testid="guided-kn-en-btn"
+                >
+                  <div className="text-center">
+                    <div className="font-medium">Guided</div>
+                    <div className="text-xs opacity-70">({theme.scripts.target} → {theme.scripts.source})</div>
+                  </div>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  onClick={() => setLearningMode('guided-en-kn')}
+                  className={`flex-1 text-xs py-2 px-2 rounded-md transition-all ${
+                    learningMode === 'guided-en-kn' 
+                      ? 'bg-white shadow-sm font-bold text-black' 
+                      : 'hover:bg-white/50 text-gray-700'
+                  }`}
+                  data-testid="guided-en-kn-btn"
+                >
+                  <div className="text-center">
+                    <div className="font-medium">Guided</div>
+                    <div className="text-xs opacity-70">({theme.scripts.source} → {theme.scripts.target})</div>
+                  </div>
+                </Button>
+              </div>
+            </div>
 
             {/* Loading State */}
             {generateContentMutation.isPending && (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <p className="text-base">Generating learning content...</p>
+                  <p className="text-base text-black">Generating learning content...</p>
                   <div className="animate-pulse mt-2 text-gray-500 text-sm">Please wait</div>
                 </CardContent>
               </Card>
@@ -613,44 +612,51 @@ export default function LanguageInterface() {
                     {learningMode === 'lazy-listen' ? (
                       // Lazy Listen Mode
                       <div className="text-center space-y-3">
-                        <h3 className="text-base text-gray-600">{currentContent.english}</h3>
-                        <div className="flex items-center justify-center space-x-3">
-                          <div>
-                            <p className="text-lg font-medium">{currentContent.target}</p>
-                            <p className="text-sm text-gray-600">{currentContent.transliteration}</p>
+                        <h3 className="text-base text-black font-medium">{currentContent.english}</h3>
+                        <div className="space-y-3">
+                          <div className="text-center">
+                            <p className="text-sm text-gray-500 mb-2">{currentContent.target}</p>
+                            <p className="text-2xl font-bold text-black">{currentContent.transliteration}</p>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => playAudio(currentContent.target)}
-                            data-testid="pronounce-btn"
-                          >
-                            <Volume2 className="w-4 h-4 mr-1" />
-                            Pronounce
-                          </Button>
+                          <div className="flex justify-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => playAudio(currentContent.target)}
+                              data-testid="pronounce-btn"
+                            >
+                              <Volume2 className="w-4 h-4 mr-1" />
+                              Pronounce
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ) : (
                       // Guided Workout Mode
                       <div className="space-y-3">
-                        <div className="text-center">
-                          <h3 className="text-base mb-3">
-                            {learningMode === 'guided-kn-en' 
-                              ? currentContent.target 
-                              : currentContent.english}
-                          </h3>
-                          {learningMode === 'guided-kn-en' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => playAudio(currentContent.target)}
-                              className="mb-3"
-                              data-testid="pronounce-kn-btn"
-                            >
-                              <Volume2 className="w-4 h-4 mr-1" />
-                              Pronounce
-                            </Button>
-                          )}
+                        <div className="text-center space-y-3">
+                          <div>
+                            <h3 className="text-base font-medium text-black mb-2">
+                              {learningMode === 'guided-kn-en' 
+                                ? currentContent.english 
+                                : currentContent.english}
+                            </h3>
+                            {learningMode === 'guided-kn-en' && (
+                              <div className="mb-3">
+                                <p className="text-sm text-gray-500 mb-2">{currentContent.target}</p>
+                                <p className="text-xl font-bold text-black mb-2">{currentContent.transliteration}</p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => playAudio(currentContent.target)}
+                                  data-testid="pronounce-kn-btn"
+                                >
+                                  <Volume2 className="w-4 h-4 mr-1" />
+                                  Pronounce
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600">
                             {learningMode === 'guided-kn-en' 
                               ? 'What does this mean in English?' 
@@ -729,34 +735,39 @@ export default function LanguageInterface() {
                       <CardTitle className="text-green-900 text-base">Correct Answer</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-base font-medium text-green-900">
+                      <div className="space-y-3">
+                        <div className="text-center">
+                          <p className="text-base font-medium text-green-900 mb-2">
                             {learningMode === 'guided-kn-en' 
                               ? currentContent.english 
-                              : currentContent.target}
+                              : currentContent.english}
                           </p>
                           {learningMode === 'guided-en-kn' && (
-                            <p className="text-green-700 text-sm">{currentContent.transliteration}</p>
+                            <div>
+                              <p className="text-sm text-green-600 mb-1">{currentContent.target}</p>
+                              <p className="text-lg font-bold text-green-900">{currentContent.transliteration}</p>
+                            </div>
                           )}
                         </div>
                         {learningMode === 'guided-en-kn' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => playAudio(currentContent.target)}
-                            data-testid="pronounce-correct-btn"
-                          >
-                            <Volume2 className="w-4 h-4 mr-1" />
-                            Pronounce
-                          </Button>
+                          <div className="flex justify-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => playAudio(currentContent.target)}
+                              data-testid="pronounce-correct-btn"
+                            >
+                              <Volume2 className="w-4 h-4 mr-1" />
+                              Pronounce
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </CardContent>
                   </Card>
                 )}
 
-                {/* Word Meanings and Quick Tip */}
+                {/* Word Meanings and Quick Tip - Consistent with translate mode */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Card>
                     <CardHeader className="pb-2">
@@ -766,8 +777,8 @@ export default function LanguageInterface() {
                       {(currentContent as any).wordMeanings && (currentContent as any).wordMeanings.length > 0 ? (
                         <div className="space-y-1">
                           {(currentContent as any).wordMeanings.map((word: any, index: number) => (
-                            <div key={index} className="text-xs">
-                              <span className="font-medium">{word.word}</span>
+                            <div key={index} className="text-sm">
+                              <span className="font-medium text-black">{word.word}</span>
                               {word.transliteration && (
                                 <span className="text-gray-600"> ({word.transliteration})</span>
                               )}
@@ -781,12 +792,12 @@ export default function LanguageInterface() {
                     </CardContent>
                   </Card>
                   
-                  <Card>
+                  <Card className="bg-blue-50 border-blue-200">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Learning Pattern</CardTitle>
+                      <CardTitle className="text-blue-900 text-base">Quick Tip</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xs text-gray-700">
+                      <p className="text-blue-800 text-sm">
                         {(currentContent as any).quickTip || "Educational tip will appear here..."}
                       </p>
                     </CardContent>
