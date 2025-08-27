@@ -227,6 +227,11 @@ export default function LanguageInterface() {
           ...prev,
           [cacheKey]: [...(prev[cacheKey] || []), ...data]
         }));
+        
+        // Update generatedContent if this is the current mode
+        if (cacheKey === `${language?.code}-${level}-${learningMode}`) {
+          setGeneratedContent(prev => [...prev, ...data]);
+        }
       } else {
         // Update cache and display first content
         setContentCache(prev => ({
@@ -317,9 +322,14 @@ export default function LanguageInterface() {
   };
 
   const handleNextSentence = () => {
-    if (contentIndex < generatedContent.length - 1) {
-      setContentIndex(contentIndex + 1);
-      setCurrentContent(generatedContent[contentIndex + 1]);
+    const cacheKey = `${language?.code}-${level}-${learningMode}`;
+    const cachedContent = contentCache[cacheKey] || [];
+    
+    if (contentIndex < cachedContent.length - 1) {
+      const newIndex = contentIndex + 1;
+      setContentIndex(newIndex);
+      setCurrentContent(cachedContent[newIndex]);
+      setGeneratedContent(cachedContent); // Sync with cache
       setUserAnswer("");
       setShowGuidance(false);
       setGuidedFeedback(null);
@@ -665,19 +675,8 @@ export default function LanguageInterface() {
             {generateContentMutation.isPending && (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <p className="text-base text-black">Generating first sentence...</p>
-                  <div className="animate-pulse mt-2 text-gray-500 text-sm">This will be much faster!</div>
-                </CardContent>
-              </Card>
-            )}
-            
-            {/* Background Activity Indicator */}
-            {backgroundQueue.length > 0 && !generateContentMutation.isPending && (
-              <Card className="bg-green-50 border-green-200">
-                <CardContent className="p-3 text-center">
-                  <p className="text-xs text-green-700">
-                    🚀 Generating more content in background... ({backgroundQueue.length} tasks remaining)
-                  </p>
+                  <p className="text-base text-black">Generating learning content...</p>
+                  <div className="animate-pulse mt-2 text-gray-500 text-sm">Please wait</div>
                 </CardContent>
               </Card>
             )}
