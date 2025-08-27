@@ -1,0 +1,21 @@
+[vite] connecting...
+client:618 [vite] connected.
+chunk-WERSD76P.js?v=77293bdd:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-lazy-listen', cachedLength: 1, contentIndex: 0, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-lazy-listen', cachedLength: 2, contentIndex: 1, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-kn-en', cachedLength: 1, contentIndex: 0, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-kn-en', cachedLength: 2, contentIndex: 1, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-kn-en', cachedLength: 4, contentIndex: 2, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-kn-en', cachedLength: 4, contentIndex: 3, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-kn-en', cachedLength: 8, contentIndex: 4, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-en-kn', cachedLength: 0, contentIndex: 5, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-en-kn', cachedLength: 2, contentIndex: 1, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-en-kn', cachedLength: 4, contentIndex: 2, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-en-kn', cachedLength: 4, contentIndex: 3, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-en-kn', cachedLength: 8, contentIndex: 4, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-basic-guided-en-kn', cachedLength: 8, contentIndex: 5, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-intermediate-guided-en-kn', cachedLength: 1, contentIndex: 0, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-intermediate-guided-en-kn', cachedLength: 2, contentIndex: 1, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-intermediate-lazy-listen', cachedLength: 1, contentIndex: 0, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-intermediate-lazy-listen', cachedLength: 2, contentIndex: 1, hasCurrentContent: true}
+language-interface.tsx:466 Next Sentence - Before: {cacheKey: 'hi-intermediate-lazy-listen', cachedLength: 4, contentIndex: 2, hasCurrentContent: true}

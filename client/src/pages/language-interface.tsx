@@ -69,6 +69,7 @@ export default function LanguageInterface() {
   
   // Track consumed sentences for refill
   const [consumedSentences, setConsumedSentences] = useState<Set<string>>(new Set());
+  
 
   // Dynamic title state
   const [languageTitle, setLanguageTitle] = useState<string>('');
@@ -79,6 +80,24 @@ export default function LanguageInterface() {
     queryKey: [`/api/languages/${languageId}`],
     enabled: !!languageId,
   });
+  
+  // Reset contentIndex when switching modes or levels
+  useEffect(() => {
+    if (!language?.code) return; // Guard against uninitialized language
+    
+    const cacheKey = `${language.code}-${level}-${learningMode}`;
+    const cachedContent = contentCache[cacheKey] || [];
+    
+    // If we have cached content, start from beginning, otherwise reset to 0
+    if (cachedContent.length > 0) {
+      setContentIndex(0);
+      setCurrentContent(cachedContent[0]);
+      setGeneratedContent(cachedContent);
+    } else {
+      setContentIndex(0);
+      setCurrentContent(null);
+    }
+  }, [level, learningMode, language?.code, contentCache]);
 
   // Speech recognition
   const { startListening, stopListening, isListening, transcript } = useSpeechRecognition({
@@ -463,12 +482,6 @@ export default function LanguageInterface() {
     const cacheKey = `${language?.code}-${level}-${learningMode}`;
     const cachedContent = contentCache[cacheKey] || [];
     
-    console.log('Next Sentence - Before:', { 
-      cacheKey, 
-      cachedLength: cachedContent.length, 
-      contentIndex,
-      hasCurrentContent: !!currentContent 
-    });
     
     // Store reference to current content before clearing
     const previousContent = currentContent;
