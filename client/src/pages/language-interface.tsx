@@ -49,26 +49,8 @@ export default function LanguageInterface() {
   const [showGuidance, setShowGuidance] = useState(false);
   const [guidedFeedback, setGuidedFeedback] = useState<GuidedFeedback | null>(null);
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
-  const [contentIndex, setContentIndex] = useState(0);
-  const [generatedContent, setGeneratedContent] = useState<LessonContent[]>([]);
-  
-  // Content cache to avoid regenerating when switching modes
-  const [contentCache, setContentCache] = useState<{
-    [key: string]: LessonContent[]; // key format: "languageCode-level-mode"
-  }>({});
-  
-  // Background generation queue for maintaining 10-sentence inventory
-  const [backgroundQueue, setBackgroundQueue] = useState<string[]>([]);
-  const [isBackgroundGenerating, setIsBackgroundGenerating] = useState(false);
-  
-  // Hybrid loading: Track which content needs word analysis
-  const [pendingWordAnalysis, setPendingWordAnalysis] = useState<Set<string>>(new Set());
-  
   // Loading state for next sentence
   const [isLoadingNextSentence, setIsLoadingNextSentence] = useState(false);
-  
-  // Track consumed sentences for refill
-  const [consumedSentences, setConsumedSentences] = useState<Set<string>>(new Set());
   
 
   // Dynamic title state
@@ -81,23 +63,6 @@ export default function LanguageInterface() {
     enabled: !!languageId,
   });
   
-  // Reset contentIndex when switching modes or levels
-  useEffect(() => {
-    if (!language?.code) return; // Guard against uninitialized language
-    
-    const cacheKey = `${language.code}-${level}-${learningMode}`;
-    const cachedContent = contentCache[cacheKey] || [];
-    
-    // If we have cached content, start from beginning, otherwise reset to 0
-    if (cachedContent.length > 0) {
-      setContentIndex(0);
-      setCurrentContent(cachedContent[0]);
-      setGeneratedContent(cachedContent);
-    } else {
-      setContentIndex(0);
-      setCurrentContent(null);
-    }
-  }, [level, learningMode, language?.code, contentCache]);
 
   // Speech recognition
   const { startListening, stopListening, isListening, transcript } = useSpeechRecognition({
@@ -143,7 +108,7 @@ export default function LanguageInterface() {
     }
   }, [language]);
 
-  // Clear content when switching functionalities (but preserve cache)
+  // Clear content when switching functionalities/modes/levels
   useEffect(() => {
     setInputText("");
     setTranslationResult(null);
@@ -151,82 +116,16 @@ export default function LanguageInterface() {
     setShowGuidance(false);
     setGuidedFeedback(null);
     setShowCorrectAnswer(false);
-    // Don't clear currentContent and generatedContent - let mutation handle it
-    // Don't clear contentIndex - let mutation handle it
+    setCurrentContent(null);
+    setIsLoadingNextSentence(false);
   }, [functionality, level, learningMode]);
 
   // Auto-generate content when learn mode settings change
   useEffect(() => {
     if (functionality === 'learn' && language) {
-      const cacheKey = `${language?.code}-${level}-${learningMode}`;
-      const cached = contentCache[cacheKey] || [];
-      
-      if (cached.length === 0) {
-        // No content in cache for this combination, generate immediately
-        generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
-      } else {
-        // Content exists in cache, use it immediately
-        setCurrentContent(cached[0]);
-        setContentIndex(0);
-        setGeneratedContent(cached);
-      }
+      generateContentMutation.mutate();
     }
   }, [functionality, level, learningMode, language?.code]);
-  
-  // Start background inventory management when language interface loads
-  useEffect(() => {
-    if (language) {
-      const currentCacheKey = `${language.code}-${level}-${learningMode}`;
-      queueInventoryManagement(currentCacheKey);
-    }
-  }, [language]);
-  
-  // Background generation processor with word analysis
-  useEffect(() => {
-    if (backgroundQueue.length > 0 && !isBackgroundGenerating) {
-      const processNextInQueue = async () => {
-        setIsBackgroundGenerating(true);
-        const [cacheKey, countStr, priority] = backgroundQueue[0].split(':');
-        const count = parseInt(countStr);
-        const [langCode, levelStr, mode] = cacheKey.split('-');
-        
-        try {
-          // Generate content with full word analysis for background inventory
-          const response = await apiRequest("POST", "/api/languages/generate-content", {
-            languageCode: langCode,
-            level: levelStr,
-            category: "Daily Life", 
-            count,
-            skipWordAnalysis: false, // Include word analysis for background content
-          });
-          const data = await response.json();
-          
-          // Update cache with background-generated content
-          setContentCache(prev => ({
-            ...prev,
-            [cacheKey]: [...(prev[cacheKey] || []), ...data]
-          }));
-          
-          // Update current view if this is the active mode
-          if (cacheKey === `${language?.code}-${level}-${learningMode}`) {
-            setGeneratedContent(prev => [...prev, ...data]);
-          }
-          
-        } catch (error) {
-          console.log('Background generation failed:', error);
-        } finally {
-          // Remove processed item from queue
-          setBackgroundQueue(prev => prev.slice(1));
-          setIsBackgroundGenerating(false);
-        }
-      };
-      
-      // Process with delay, prioritizing high-priority items
-      const delay = backgroundQueue[0].includes('high') ? 500 : 2000;
-      const timeoutId = setTimeout(processNextInQueue, delay);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [backgroundQueue, isBackgroundGenerating]);
 
   // Translation mutation
   const translateMutation = useMutation({
@@ -251,101 +150,21 @@ export default function LanguageInterface() {
     },
   });
 
-  // Hybrid approach: Fast sentence loading with separate word analysis
+  // Simple content generation - no caching
   const generateContentMutation = useMutation({
-    mutationFn: async (params: { isBackgroundGeneration?: boolean; count?: number; skipWordAnalysis?: boolean } = {}) => {
-      const { isBackgroundGeneration = false, count = 1, skipWordAnalysis = true } = params;
-      const cacheKey = `${language?.code}-${level}-${learningMode}`;
-      
-      // Check cache first (only if not background generation)
-      if (!isBackgroundGeneration) {
-        const cached = contentCache[cacheKey] || [];
-        if (cached.length > 0) {
-          return { data: cached, ...params, fromCache: true };
-        }
-      }
-      
-      // Generate content fast (without word analysis for immediate display)
+    mutationFn: async () => {
       const response = await apiRequest("POST", "/api/languages/generate-content", {
         languageCode: language?.code,
         level,
         category: "Daily Life", 
-        count,
-        skipWordAnalysis,
+        count: 1,
+        skipWordAnalysis: false, // Include word analysis for complete content
       });
-      const data = await response.json();
-      return { data, ...params };
+      return response.json();
     },
-    onSuccess: (result) => {
-      const { data, isBackgroundGeneration = false, count = 1, skipWordAnalysis = true } = result;
-      const fromCache = 'fromCache' in result ? result.fromCache : false;
-      const cacheKey = `${language?.code}-${level}-${learningMode}`;
-      
-      if (isBackgroundGeneration) {
-        // Append background-generated content to cache
-        setContentCache(prev => ({
-          ...prev,
-          [cacheKey]: [...(prev[cacheKey] || []), ...data]
-        }));
-        
-        // Update current view if this is the active mode
-        if (cacheKey === `${language?.code}-${level}-${learningMode}`) {
-          setGeneratedContent(prev => [...prev, ...data]);
-        }
-      } else {
-        // Update cache and display content immediately
-        const currentCache = contentCache[cacheKey] || [];
-        const updatedCache = [...currentCache, ...data];
-        
-        setContentCache(prev => ({
-          ...prev,
-          [cacheKey]: updatedCache
-        }));
-        
-        // If we have existing content, advance to the next item
-        if (currentCache.length > 0) {
-          const newIndex = currentCache.length; // This will be the index of the first new item
-          setContentIndex(newIndex);
-          setCurrentContent(updatedCache[newIndex]); // Fix: use correct indexed item
-          setGeneratedContent(updatedCache);
-        } else {
-          // First time loading content
-          setGeneratedContent(data);
-          setCurrentContent(data[0]);
-          setContentIndex(0);
-        }
-        setIsLoadingNextSentence(false); // Clear loading state
-        
-        // If content was generated without word analysis, trigger background analysis
-        if (skipWordAnalysis && !fromCache) {
-          data.forEach((item: LessonContent, index: number) => {
-            if (!item.wordMeanings || !item.quickTip) {
-              const itemKey = `${cacheKey}-${index}`;
-              setPendingWordAnalysis(prev => {
-                const newSet = new Set(prev);
-                newSet.add(itemKey);
-                return newSet;
-              });
-              loadWordAnalysisForItem(item, cacheKey, index);
-            }
-          });
-        } else {
-          // Clear any pending analysis for items that already have word analysis
-          data.forEach((item: LessonContent, index: number) => {
-            if (item.wordMeanings && item.quickTip) {
-              const itemKey = `${cacheKey}-${index}`;
-              setPendingWordAnalysis(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(itemKey);
-                return newSet;
-              });
-            }
-          });
-        }
-        
-        // Maintain 10-sentence inventory
-        queueInventoryManagement(cacheKey);
-      }
+    onSuccess: (data) => {
+      setCurrentContent(data[0]);
+      setIsLoadingNextSentence(false);
     },
     onError: (error) => {
       toast({
@@ -353,83 +172,9 @@ export default function LanguageInterface() {
         description: "Failed to generate learning content. Please try again.",
         variant: "destructive",
       });
+      setIsLoadingNextSentence(false);
     },
   });
-  
-  // Separate word analysis loading for hybrid approach
-  const loadWordAnalysisForItem = async (item: LessonContent, cacheKey: string, index: number) => {
-    try {
-      const response = await apiRequest("POST", "/api/languages/add-word-analysis", {
-        content: item,
-        languageCode: language?.code,
-      });
-      const enhancedItem = await response.json();
-      
-      // Update cache with enhanced content
-      setContentCache(prev => {
-        const cached = prev[cacheKey] || [];
-        const updated = [...cached];
-        updated[index] = enhancedItem;
-        return { ...prev, [cacheKey]: updated };
-      });
-      
-      // Update current display if this is the visible item
-      if (cacheKey === `${language?.code}-${level}-${learningMode}` && index === contentIndex) {
-        setCurrentContent(enhancedItem);
-        setGeneratedContent(prev => {
-          const updated = [...prev];
-          updated[index] = enhancedItem;
-          return updated;
-        });
-      }
-      
-      // Remove from pending analysis
-      const itemKey = `${cacheKey}-${index}`;
-      setPendingWordAnalysis(prev => {
-        const updated = new Set(prev);
-        updated.delete(itemKey);
-        return updated;
-      });
-    } catch (error) {
-      console.error('Failed to load word analysis:', error);
-    }
-  };
-  
-  // Enhanced inventory management: Maintain 10 fresh sentences per mode across ALL levels
-  const queueInventoryManagement = (currentCacheKey: string) => {
-    const modes = ['lazy-listen', 'guided-kn-en', 'guided-en-kn'];
-    const levels = ['basic', 'intermediate'];
-    
-    levels.forEach(lvl => {
-      modes.forEach(mode => {
-        const cacheKey = `${language?.code}-${lvl}-${mode}`;
-        const cached = contentCache[cacheKey] || [];
-        const needed = 10 - cached.length;
-        
-        if (needed > 0) {
-          // Prioritize current mode and level, but generate for all
-          const priority = (cacheKey === currentCacheKey) ? 'high' : 'low';
-          queueBackgroundGeneration(cacheKey, needed, priority);
-        }
-      });
-    });
-  };
-  
-  // Background generation queue management with priority
-  const queueBackgroundGeneration = (cacheKey: string, count: number, priority: 'high' | 'low' = 'low') => {
-    const queueItem = `${cacheKey}:${count}:${priority}`;
-    setBackgroundQueue(prev => {
-      const newQueue = [...prev, queueItem];
-      // Sort by priority (high priority first)
-      return newQueue.sort((a, b) => {
-        const aPriority = a.split(':')[2];
-        const bPriority = b.split(':')[2];
-        if (aPriority === 'high' && bPriority === 'low') return -1;
-        if (aPriority === 'low' && bPriority === 'high') return 1;
-        return 0;
-      });
-    });
-  };
 
   // Check answer mutation
   const checkAnswerMutation = useMutation({
@@ -479,24 +224,6 @@ export default function LanguageInterface() {
   };
 
   const handleNextSentence = () => {
-    const cacheKey = `${language?.code}-${level}-${learningMode}`;
-    const cachedContent = contentCache[cacheKey] || [];
-    
-    // Debug for problematic modes only
-    if (learningMode === 'guided-en-kn' || (level === 'intermediate' && learningMode.includes('guided'))) {
-      console.log(`🔍 DEBUG ${level}-${learningMode}:`, {
-        cacheKey,
-        cachedLength: cachedContent.length,
-        contentIndex,
-        hasCurrentContent: !!currentContent,
-        cacheKeys: Object.keys(contentCache),
-        fullCache: contentCache
-      });
-    }
-    
-    // Store reference to current content before clearing
-    const previousContent = currentContent;
-    
     // Immediately clear the screen - user wants instant feedback
     setCurrentContent(null);
     setUserAnswer("");
@@ -505,36 +232,8 @@ export default function LanguageInterface() {
     setShowCorrectAnswer(false);
     setIsLoadingNextSentence(true);
     
-    // Mark current sentence as consumed for refill
-    if (previousContent) {
-      const sentenceKey = `${cacheKey}-${contentIndex}`;
-      setConsumedSentences(prev => {
-        const newSet = new Set(prev);
-        newSet.add(sentenceKey);
-        return newSet;
-      });
-      
-      // Trigger refill for this mode
-      queueBackgroundGeneration(cacheKey, 1, 'high');
-    }
-    
-    // Check cache and load next sentence
-    if (contentIndex < cachedContent.length - 1) {
-      // Move to next sentence in cache - immediate loading
-      const newIndex = contentIndex + 1;
-      setContentIndex(newIndex);
-      setCurrentContent(cachedContent[newIndex]);
-      setGeneratedContent(cachedContent);
-      setIsLoadingNextSentence(false);
-    } else if (cachedContent.length === 0) {
-      // No cache at all - show better loading message
-      setTimeout(() => {
-        generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
-      }, 100);
-    } else {
-      // Reached end of cache - generate more
-      generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
-    }
+    // Generate new content - simple approach
+    generateContentMutation.mutate();
   };
 
   const handleRevealAnswer = () => {
@@ -1018,7 +717,7 @@ export default function LanguageInterface() {
                   <WordAnalysisCards 
                     wordMeanings={(currentContent as any)?.wordMeanings}
                     quickTip={(currentContent as any)?.quickTip}
-                    isLoading={pendingWordAnalysis.has(`${language?.code}-${level}-${learningMode}-${contentIndex}`)}
+                    isLoading={false}
                   />
                 )}
 
@@ -1087,7 +786,7 @@ export default function LanguageInterface() {
                   <WordAnalysisCards 
                     wordMeanings={(currentContent as any)?.wordMeanings}
                     quickTip={(currentContent as any)?.quickTip}
-                    isLoading={pendingWordAnalysis.has(`${language?.code}-${level}-${learningMode}-${contentIndex}`)}
+                    isLoading={false}
                   />
                 )}
 

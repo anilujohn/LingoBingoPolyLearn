@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { LessonContent } from "@shared/schema";
 
 export interface GeminiConfig {
-  model: "gemini-2.5-flash" | "gemini-2.5-pro";
+  model: "gemini-2.5-flash-lite" | "gemini-2.5-pro";
   temperature?: number;
   maxTokens?: number;
 }
@@ -10,7 +10,7 @@ export interface GeminiConfig {
 export class GeminiService {
   private ai: GoogleGenAI;
   private defaultConfig: GeminiConfig = {
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     temperature: 0.7,
     maxTokens: 1000,
   };
@@ -315,7 +315,7 @@ ${includeTranslation ? `Also provide:
 
     try {
       const response = await this.ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-flash-lite",
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         config: {
           responseMimeType: "application/json",
@@ -497,7 +497,7 @@ Return ONLY the title text, nothing else.`;
 
     try {
       const response = await this.ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-2.5-flash-lite",
         contents: [{ role: "user", parts: [{ text: prompt }] }]
       });
 
