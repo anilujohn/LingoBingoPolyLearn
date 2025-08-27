@@ -482,6 +482,17 @@ export default function LanguageInterface() {
     const cacheKey = `${language?.code}-${level}-${learningMode}`;
     const cachedContent = contentCache[cacheKey] || [];
     
+    // Debug for problematic modes only
+    if (learningMode === 'guided-en-kn' || (level === 'intermediate' && learningMode.includes('guided'))) {
+      console.log(`🔍 DEBUG ${level}-${learningMode}:`, {
+        cacheKey,
+        cachedLength: cachedContent.length,
+        contentIndex,
+        hasCurrentContent: !!currentContent,
+        cacheKeys: Object.keys(contentCache),
+        fullCache: contentCache
+      });
+    }
     
     // Store reference to current content before clearing
     const previousContent = currentContent;
@@ -726,6 +737,8 @@ export default function LanguageInterface() {
               <CardContent className="space-y-4">
                 <div className="relative">
                   <Textarea
+                    id="translate-input"
+                    name="translateInput"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={(e) => {
@@ -951,6 +964,8 @@ export default function LanguageInterface() {
 
                         <div className="relative">
                           <Textarea
+                            id="answer-input"
+                            name="userAnswer"
                             value={userAnswer}
                             onChange={(e) => setUserAnswer(e.target.value)}
                             onKeyDown={(e) => {
