@@ -56,6 +56,10 @@ export default function LanguageInterface() {
   const [contentCache, setContentCache] = useState<{
     [key: string]: LessonContent[]; // key format: "languageCode-level-mode"
   }>({});
+  
+  // Background generation queue
+  const [backgroundQueue, setBackgroundQueue] = useState<string[]>([]);
+  const [isBackgroundGenerating, setIsBackgroundGenerating] = useState(false);
 
   // Dynamic title state
   const [languageTitle, setLanguageTitle] = useState<string>('');
@@ -123,12 +127,51 @@ export default function LanguageInterface() {
     // Don't clear contentIndex - let mutation handle it
   }, [functionality, level, learningMode]);
 
-  // Auto-generate content when learn mode settings change
+  // Auto-generate content when learn mode settings change (start with 1 sentence)
   useEffect(() => {
     if (functionality === 'learn' && language) {
-      generateContentMutation.mutate();
+      generateContentMutation.mutate({ count: 1 });
     }
   }, [functionality, level, learningMode, language?.code]);
+  
+  // Background generation processor
+  useEffect(() => {
+    if (backgroundQueue.length > 0 && !isBackgroundGenerating) {
+      const processNextInQueue = async () => {
+        setIsBackgroundGenerating(true);
+        const [cacheKey, countStr] = backgroundQueue[0].split(':');
+        const count = parseInt(countStr);
+        const [langCode, level, mode] = cacheKey.split('-');
+        
+        try {
+          const response = await apiRequest("POST", "/api/languages/generate-content", {
+            languageCode: langCode,
+            level,
+            category: "Daily Life", 
+            count,
+          });
+          const data = await response.json();
+          
+          // Update cache with background-generated content
+          setContentCache(prev => ({
+            ...prev,
+            [cacheKey]: [...(prev[cacheKey] || []), ...data]
+          }));
+          
+        } catch (error) {
+          console.log('Background generation failed:', error);
+        } finally {
+          // Remove processed item from queue
+          setBackgroundQueue(prev => prev.slice(1));
+          setIsBackgroundGenerating(false);
+        }
+      };
+      
+      // Process with small delay to avoid overwhelming API
+      const timeoutId = setTimeout(processNextInQueue, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [backgroundQueue, isBackgroundGenerating]);
 
   // Translation mutation
   const translateMutation = useMutation({
@@ -153,39 +196,64 @@ export default function LanguageInterface() {
     },
   });
 
-  // Generate content mutation for learn mode with caching
+  // Progressive content generation - First sentence fast, then background
   const generateContentMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (params: { isBackgroundGeneration?: boolean; count?: number } = {}) => {
+      const { isBackgroundGeneration = false, count = 1 } = params;
       const cacheKey = `${language?.code}-${level}-${learningMode}`;
       
       // Check cache first
-      if (contentCache[cacheKey] && contentCache[cacheKey].length > 0) {
-        return contentCache[cacheKey];
+      if (contentCache[cacheKey] && contentCache[cacheKey].length > 0 && !isBackgroundGeneration) {
+        return { data: contentCache[cacheKey], ...params };
       }
       
-      // Generate new content if not cached
+      // Generate content (1 for immediate, more for background)
       const response = await apiRequest("POST", "/api/languages/generate-content", {
         languageCode: language?.code,
         level,
         category: "Daily Life", 
-        count: 5,
+        count,
       });
-      return response.json();
+      const data = await response.json();
+      return { data, ...params };
     },
-    onSuccess: (data: LessonContent[]) => {
+    onSuccess: (result) => {
+      const { data, isBackgroundGeneration = false, count = 1 } = result;
       const cacheKey = `${language?.code}-${level}-${learningMode}`;
       
-      // Update cache if this was newly generated content
-      if (!contentCache[cacheKey] || contentCache[cacheKey].length === 0) {
+      if (isBackgroundGeneration) {
+        // Append background-generated content to existing cache
+        setContentCache(prev => ({
+          ...prev,
+          [cacheKey]: [...(prev[cacheKey] || []), ...data]
+        }));
+      } else {
+        // Update cache and display first content
         setContentCache(prev => ({
           ...prev,
           [cacheKey]: data
         }));
+        
+        setGeneratedContent(data);
+        setCurrentContent(data[0]);
+        setContentIndex(0);
+        
+        // Queue background generation if this was just 1 sentence
+        if (count === 1 && data.length === 1) {
+          queueBackgroundGeneration(cacheKey, 4); // Generate 4 more
+          
+          // Pre-cache other modes (1 sentence each)
+          const otherModes = ['lazy-listen', 'guided-kn-en', 'guided-en-kn']
+            .filter(mode => mode !== learningMode);
+          
+          otherModes.forEach(mode => {
+            const otherCacheKey = `${language?.code}-${level}-${mode}`;
+            if (!contentCache[otherCacheKey] || contentCache[otherCacheKey].length === 0) {
+              queueBackgroundGeneration(otherCacheKey, 1);
+            }
+          });
+        }
       }
-      
-      setGeneratedContent(data);
-      setCurrentContent(data[0]);
-      setContentIndex(0);
     },
     onError: (error) => {
       toast({
@@ -195,6 +263,11 @@ export default function LanguageInterface() {
       });
     },
   });
+  
+  // Background generation queue management
+  const queueBackgroundGeneration = (cacheKey: string, count: number) => {
+    setBackgroundQueue(prev => [...prev, `${cacheKey}:${count}`]);
+  };
 
   // Check answer mutation
   const checkAnswerMutation = useMutation({
@@ -252,7 +325,7 @@ export default function LanguageInterface() {
       setGuidedFeedback(null);
       setShowCorrectAnswer(false);
     } else {
-      generateContentMutation.mutate();
+      generateContentMutation.mutate({ count: 5 }); // Generate 5 more when reaching end
     }
   };
 
@@ -592,8 +665,19 @@ export default function LanguageInterface() {
             {generateContentMutation.isPending && (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <p className="text-base text-black">Generating learning content...</p>
-                  <div className="animate-pulse mt-2 text-gray-500 text-sm">Please wait</div>
+                  <p className="text-base text-black">Generating first sentence...</p>
+                  <div className="animate-pulse mt-2 text-gray-500 text-sm">This will be much faster!</div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Background Activity Indicator */}
+            {backgroundQueue.length > 0 && !generateContentMutation.isPending && (
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="p-3 text-center">
+                  <p className="text-xs text-green-700">
+                    🚀 Generating more content in background... ({backgroundQueue.length} tasks remaining)
+                  </p>
                 </CardContent>
               </Card>
             )}
