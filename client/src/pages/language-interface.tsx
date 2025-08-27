@@ -57,9 +57,12 @@ export default function LanguageInterface() {
     [key: string]: LessonContent[]; // key format: "languageCode-level-mode"
   }>({});
   
-  // Background generation queue
+  // Background generation queue for maintaining 10-sentence inventory
   const [backgroundQueue, setBackgroundQueue] = useState<string[]>([]);
   const [isBackgroundGenerating, setIsBackgroundGenerating] = useState(false);
+  
+  // Hybrid loading: Track which content needs word analysis
+  const [pendingWordAnalysis, setPendingWordAnalysis] = useState<Set<string>>(new Set());
 
   // Dynamic title state
   const [languageTitle, setLanguageTitle] = useState<string>('');
@@ -127,28 +130,38 @@ export default function LanguageInterface() {
     // Don't clear contentIndex - let mutation handle it
   }, [functionality, level, learningMode]);
 
-  // Auto-generate content when learn mode settings change (start with 1 sentence)
+  // Auto-generate content when learn mode settings change
   useEffect(() => {
     if (functionality === 'learn' && language) {
-      generateContentMutation.mutate({ count: 1 });
+      generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
     }
   }, [functionality, level, learningMode, language?.code]);
   
-  // Background generation processor
+  // Start background inventory management when language interface loads
+  useEffect(() => {
+    if (language) {
+      const currentCacheKey = `${language.code}-${level}-${learningMode}`;
+      queueInventoryManagement(currentCacheKey);
+    }
+  }, [language]);
+  
+  // Background generation processor with word analysis
   useEffect(() => {
     if (backgroundQueue.length > 0 && !isBackgroundGenerating) {
       const processNextInQueue = async () => {
         setIsBackgroundGenerating(true);
-        const [cacheKey, countStr] = backgroundQueue[0].split(':');
+        const [cacheKey, countStr, priority] = backgroundQueue[0].split(':');
         const count = parseInt(countStr);
-        const [langCode, level, mode] = cacheKey.split('-');
+        const [langCode, levelStr, mode] = cacheKey.split('-');
         
         try {
+          // Generate content with full word analysis for background inventory
           const response = await apiRequest("POST", "/api/languages/generate-content", {
             languageCode: langCode,
-            level,
+            level: levelStr,
             category: "Daily Life", 
             count,
+            skipWordAnalysis: false, // Include word analysis for background content
           });
           const data = await response.json();
           
@@ -157,6 +170,11 @@ export default function LanguageInterface() {
             ...prev,
             [cacheKey]: [...(prev[cacheKey] || []), ...data]
           }));
+          
+          // Update current view if this is the active mode
+          if (cacheKey === `${language?.code}-${level}-${learningMode}`) {
+            setGeneratedContent(prev => [...prev, ...data]);
+          }
           
         } catch (error) {
           console.log('Background generation failed:', error);
@@ -167,8 +185,9 @@ export default function LanguageInterface() {
         }
       };
       
-      // Process with small delay to avoid overwhelming API
-      const timeoutId = setTimeout(processNextInQueue, 1000);
+      // Process with delay, prioritizing high-priority items
+      const delay = backgroundQueue[0].includes('high') ? 500 : 2000;
+      const timeoutId = setTimeout(processNextInQueue, delay);
       return () => clearTimeout(timeoutId);
     }
   }, [backgroundQueue, isBackgroundGenerating]);
@@ -196,44 +215,49 @@ export default function LanguageInterface() {
     },
   });
 
-  // Progressive content generation - First sentence fast, then background
+  // Hybrid approach: Fast sentence loading with separate word analysis
   const generateContentMutation = useMutation({
-    mutationFn: async (params: { isBackgroundGeneration?: boolean; count?: number } = {}) => {
-      const { isBackgroundGeneration = false, count = 1 } = params;
+    mutationFn: async (params: { isBackgroundGeneration?: boolean; count?: number; skipWordAnalysis?: boolean } = {}) => {
+      const { isBackgroundGeneration = false, count = 1, skipWordAnalysis = true } = params;
       const cacheKey = `${language?.code}-${level}-${learningMode}`;
       
-      // Check cache first
-      if (contentCache[cacheKey] && contentCache[cacheKey].length > 0 && !isBackgroundGeneration) {
-        return { data: contentCache[cacheKey], ...params };
+      // Check cache first (only if not background generation)
+      if (!isBackgroundGeneration) {
+        const cached = contentCache[cacheKey] || [];
+        if (cached.length > 0) {
+          return { data: cached, ...params, fromCache: true };
+        }
       }
       
-      // Generate content (1 for immediate, more for background)
+      // Generate content fast (without word analysis for immediate display)
       const response = await apiRequest("POST", "/api/languages/generate-content", {
         languageCode: language?.code,
         level,
         category: "Daily Life", 
         count,
+        skipWordAnalysis,
       });
       const data = await response.json();
       return { data, ...params };
     },
     onSuccess: (result) => {
-      const { data, isBackgroundGeneration = false, count = 1 } = result;
+      const { data, isBackgroundGeneration = false, count = 1, skipWordAnalysis = true } = result;
+      const fromCache = 'fromCache' in result ? result.fromCache : false;
       const cacheKey = `${language?.code}-${level}-${learningMode}`;
       
       if (isBackgroundGeneration) {
-        // Append background-generated content to existing cache
+        // Append background-generated content to cache
         setContentCache(prev => ({
           ...prev,
           [cacheKey]: [...(prev[cacheKey] || []), ...data]
         }));
         
-        // Update generatedContent if this is the current mode
+        // Update current view if this is the active mode
         if (cacheKey === `${language?.code}-${level}-${learningMode}`) {
           setGeneratedContent(prev => [...prev, ...data]);
         }
       } else {
-        // Update cache and display first content
+        // Update cache and display content immediately
         setContentCache(prev => ({
           ...prev,
           [cacheKey]: data
@@ -243,21 +267,23 @@ export default function LanguageInterface() {
         setCurrentContent(data[0]);
         setContentIndex(0);
         
-        // Queue background generation if this was just 1 sentence
-        if (count === 1 && data.length === 1) {
-          queueBackgroundGeneration(cacheKey, 4); // Generate 4 more
-          
-          // Pre-cache other modes (1 sentence each)
-          const otherModes = ['lazy-listen', 'guided-kn-en', 'guided-en-kn']
-            .filter(mode => mode !== learningMode);
-          
-          otherModes.forEach(mode => {
-            const otherCacheKey = `${language?.code}-${level}-${mode}`;
-            if (!contentCache[otherCacheKey] || contentCache[otherCacheKey].length === 0) {
-              queueBackgroundGeneration(otherCacheKey, 1);
+        // If content was generated without word analysis, trigger background analysis
+        if (skipWordAnalysis && !fromCache) {
+          data.forEach((item: LessonContent, index: number) => {
+            if (!item.wordMeanings || !item.quickTip) {
+              const itemKey = `${cacheKey}-${index}`;
+              setPendingWordAnalysis(prev => {
+                const newSet = new Set(prev);
+                newSet.add(itemKey);
+                return newSet;
+              });
+              loadWordAnalysisForItem(item, cacheKey, index);
             }
           });
         }
+        
+        // Maintain 10-sentence inventory
+        queueInventoryManagement(cacheKey);
       }
     },
     onError: (error) => {
@@ -269,9 +295,75 @@ export default function LanguageInterface() {
     },
   });
   
-  // Background generation queue management
-  const queueBackgroundGeneration = (cacheKey: string, count: number) => {
-    setBackgroundQueue(prev => [...prev, `${cacheKey}:${count}`]);
+  // Separate word analysis loading for hybrid approach
+  const loadWordAnalysisForItem = async (item: LessonContent, cacheKey: string, index: number) => {
+    try {
+      const response = await apiRequest("POST", "/api/languages/add-word-analysis", {
+        content: item,
+        languageCode: language?.code,
+      });
+      const enhancedItem = await response.json();
+      
+      // Update cache with enhanced content
+      setContentCache(prev => {
+        const cached = prev[cacheKey] || [];
+        const updated = [...cached];
+        updated[index] = enhancedItem;
+        return { ...prev, [cacheKey]: updated };
+      });
+      
+      // Update current display if this is the visible item
+      if (cacheKey === `${language?.code}-${level}-${learningMode}` && index === contentIndex) {
+        setCurrentContent(enhancedItem);
+        setGeneratedContent(prev => {
+          const updated = [...prev];
+          updated[index] = enhancedItem;
+          return updated;
+        });
+      }
+      
+      // Remove from pending analysis
+      setPendingWordAnalysis(prev => {
+        const updated = new Set(prev);
+        updated.delete(`${cacheKey}-${index}`);
+        return updated;
+      });
+    } catch (error) {
+      console.error('Failed to load word analysis:', error);
+    }
+  };
+  
+  // Inventory management: Maintain 10 sentences per mode
+  const queueInventoryManagement = (currentCacheKey: string) => {
+    const modes = ['lazy-listen', 'guided-kn-en', 'guided-en-kn'];
+    
+    modes.forEach(mode => {
+      const cacheKey = `${language?.code}-${level}-${mode}`;
+      const cached = contentCache[cacheKey] || [];
+      const needed = 10 - cached.length;
+      
+      if (needed > 0) {
+        // Prioritize current mode
+        const priority = cacheKey === currentCacheKey ? 'high' : 'low';
+        queueBackgroundGeneration(cacheKey, needed, priority);
+      }
+    });
+  };
+  
+  // Background generation queue management with priority
+  const queueBackgroundGeneration = (cacheKey: string, count: number, priority: 'high' | 'low' = 'low') => {
+    const queueItem = `${cacheKey}:${count}:${priority}`;
+    setBackgroundQueue(prev => {
+      const newQueue = [...prev, queueItem];
+      // Sort by priority (high priority first)
+      return newQueue.sort((a, b) => {
+        const aPriority = a.split(':')[2];
+        const bPriority = b.split(':')[2];
+        if (aPriority === 'high' && bPriority === 'low') return -1;
+        if (aPriority === 'low' && bPriority === 'high') return 1;
+        return 0;
+      });
+    });
   };
 
   // Check answer mutation

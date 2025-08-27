@@ -121,6 +121,12 @@ export interface LessonContent {
   context?: string;
   explanation?: string;
   audioUrl?: string;
+  wordMeanings?: Array<{
+    word: string;
+    meaning: string;
+    transliteration?: string;
+  }>;
+  quickTip?: string;
 }
 
 // API response types

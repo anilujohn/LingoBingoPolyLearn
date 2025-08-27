@@ -136,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/languages/generate-content", async (req, res) => {
     try {
-      const { languageCode, level, category, count, model } = generateContentSchema.parse(req.body);
+      const { languageCode, level, category, count, model, skipWordAnalysis } = req.body;
       
       // Get language details from storage
       const language = await storage.getAllLanguages()
@@ -157,6 +157,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         count || 5,
         config
       );
+
+      // Skip word analysis if requested (for fast loading)
+      if (skipWordAnalysis) {
+        res.json(content);
+        return;
+      }
 
       // Add word analysis to each content item
       const enhancedContent = await Promise.all(
@@ -183,6 +189,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating content:", error);
       res.status(500).json({ message: "Failed to generate content" });
+    }
+  });
+
+  // New route for adding word analysis to existing content
+  app.post("/api/languages/add-word-analysis", async (req, res) => {
+    try {
+      const { content, languageCode } = req.body;
+      
+      // Add word analysis to the content item
+      const wordAnalysis = await geminiService.analyzeWordsForLearning(
+        content.english,
+        content.target,
+        languageCode
+      );
+      
+      const enhancedContent = {
+        ...content,
+        wordMeanings: wordAnalysis.wordMeanings,
+        quickTip: wordAnalysis.quickTip
+      };
+      
+      res.json(enhancedContent);
+    } catch (error) {
+      console.error("Error adding word analysis:", error);
+      res.status(500).json({ message: "Failed to add word analysis" });
     }
   });
 
