@@ -287,7 +287,7 @@ export default function LanguageInterface() {
         if (currentCache.length > 0) {
           const newIndex = currentCache.length; // This will be the index of the first new item
           setContentIndex(newIndex);
-          setCurrentContent(data[0]);
+          setCurrentContent(updatedCache[newIndex]); // Fix: use correct indexed item
           setGeneratedContent(updatedCache);
         } else {
           // First time loading content
@@ -463,6 +463,12 @@ export default function LanguageInterface() {
     const cacheKey = `${language?.code}-${level}-${learningMode}`;
     const cachedContent = contentCache[cacheKey] || [];
     
+    console.log('Next Sentence - Before:', { 
+      cacheKey, 
+      cachedLength: cachedContent.length, 
+      contentIndex,
+      hasCurrentContent: !!currentContent 
+    });
     
     // Store reference to current content before clearing
     const previousContent = currentContent;
