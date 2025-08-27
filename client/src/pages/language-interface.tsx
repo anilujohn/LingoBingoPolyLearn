@@ -440,8 +440,19 @@ export default function LanguageInterface() {
     const cacheKey = `${language?.code}-${level}-${learningMode}`;
     const cachedContent = contentCache[cacheKey] || [];
     
+    // Store reference to current content before clearing
+    const previousContent = currentContent;
+    
+    // Immediately clear the screen - user wants instant feedback
+    setCurrentContent(null);
+    setUserAnswer("");
+    setShowGuidance(false);
+    setGuidedFeedback(null);
+    setShowCorrectAnswer(false);
+    setIsLoadingNextSentence(true);
+    
     // Mark current sentence as consumed for refill
-    if (currentContent) {
+    if (previousContent) {
       const sentenceKey = `${cacheKey}-${contentIndex}`;
       setConsumedSentences(prev => {
         const newSet = new Set(prev);
@@ -453,26 +464,20 @@ export default function LanguageInterface() {
       queueBackgroundGeneration(cacheKey, 1, 'high');
     }
     
-    if (contentIndex < cachedContent.length - 1) {
-      // Move to next sentence in cache
-      const newIndex = contentIndex + 1;
-      setContentIndex(newIndex);
-      setCurrentContent(cachedContent[newIndex]);
-      setGeneratedContent(cachedContent);
-      setUserAnswer("");
-      setShowGuidance(false);
-      setGuidedFeedback(null);
-      setShowCorrectAnswer(false);
-    } else {
-      // No more sentences in cache - show loading and generate more
-      setIsLoadingNextSentence(true);
-      setCurrentContent(null);
-      setUserAnswer("");
-      setShowGuidance(false);
-      setGuidedFeedback(null);
-      setShowCorrectAnswer(false);
-      generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
-    }
+    // Use setTimeout to simulate instant loading while still checking cache
+    setTimeout(() => {
+      if (contentIndex < cachedContent.length - 1) {
+        // Move to next sentence in cache
+        const newIndex = contentIndex + 1;
+        setContentIndex(newIndex);
+        setCurrentContent(cachedContent[newIndex]);
+        setGeneratedContent(cachedContent);
+        setIsLoadingNextSentence(false);
+      } else {
+        // No more sentences in cache - generate more
+        generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
+      }
+    }, 100); // Small delay to show the cleared screen
   };
 
   const handleRevealAnswer = () => {
