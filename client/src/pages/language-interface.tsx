@@ -139,7 +139,18 @@ export default function LanguageInterface() {
   // Auto-generate content when learn mode settings change
   useEffect(() => {
     if (functionality === 'learn' && language) {
-      generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
+      const cacheKey = `${language?.code}-${level}-${learningMode}`;
+      const cached = contentCache[cacheKey] || [];
+      
+      if (cached.length === 0) {
+        // No content in cache for this combination, generate immediately
+        generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
+      } else {
+        // Content exists in cache, use it immediately
+        setCurrentContent(cached[0]);
+        setContentIndex(0);
+        setGeneratedContent(cached);
+      }
     }
   }, [functionality, level, learningMode, language?.code]);
   
@@ -353,7 +364,7 @@ export default function LanguageInterface() {
     }
   };
   
-  // Enhanced inventory management: Maintain 10 fresh sentences per mode
+  // Enhanced inventory management: Maintain 10 fresh sentences per mode across ALL levels
   const queueInventoryManagement = (currentCacheKey: string) => {
     const modes = ['lazy-listen', 'guided-kn-en', 'guided-en-kn'];
     const levels = ['basic', 'intermediate'];
@@ -365,7 +376,7 @@ export default function LanguageInterface() {
         const needed = 10 - cached.length;
         
         if (needed > 0) {
-          // Prioritize current mode and level
+          // Prioritize current mode and level, but generate for all
           const priority = (cacheKey === currentCacheKey) ? 'high' : 'low';
           queueBackgroundGeneration(cacheKey, needed, priority);
         }
@@ -464,20 +475,23 @@ export default function LanguageInterface() {
       queueBackgroundGeneration(cacheKey, 1, 'high');
     }
     
-    // Use setTimeout to simulate instant loading while still checking cache
-    setTimeout(() => {
-      if (contentIndex < cachedContent.length - 1) {
-        // Move to next sentence in cache
-        const newIndex = contentIndex + 1;
-        setContentIndex(newIndex);
-        setCurrentContent(cachedContent[newIndex]);
-        setGeneratedContent(cachedContent);
-        setIsLoadingNextSentence(false);
-      } else {
-        // No more sentences in cache - generate more
+    // Check cache and load next sentence
+    if (contentIndex < cachedContent.length - 1) {
+      // Move to next sentence in cache - immediate loading
+      const newIndex = contentIndex + 1;
+      setContentIndex(newIndex);
+      setCurrentContent(cachedContent[newIndex]);
+      setGeneratedContent(cachedContent);
+      setIsLoadingNextSentence(false);
+    } else if (cachedContent.length === 0) {
+      // No cache at all - show better loading message
+      setTimeout(() => {
         generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
-      }
-    }, 100); // Small delay to show the cleared screen
+      }, 100);
+    } else {
+      // Reached end of cache - generate more
+      generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
+    }
   };
 
   const handleRevealAnswer = () => {
@@ -822,11 +836,13 @@ export default function LanguageInterface() {
             </div>
 
             {/* Loading State */}
-            {(generateContentMutation.isPending || isLoadingNextSentence) && (
+            {(generateContentMutation.isPending || isLoadingNextSentence || !currentContent) && (
               <Card>
                 <CardContent className="p-6 text-center">
                   <p className="text-base text-black">
-                    {isLoadingNextSentence ? "Loading next sentence..." : "Generating learning content..."}
+                    {isLoadingNextSentence ? "Loading next sentence..." : 
+                     !currentContent ? "Preparing content..." : 
+                     "Generating learning content..."}
                   </p>
                   <div className="animate-pulse mt-2 text-gray-500 text-sm">Please wait</div>
                 </CardContent>
@@ -834,7 +850,7 @@ export default function LanguageInterface() {
             )}
 
             {/* Learning Content */}
-            {currentContent && !generateContentMutation.isPending && (
+            {currentContent && !isLoadingNextSentence && (
               <div className="space-y-3">
                 {/* Main Learning Card */}
                 <Card className={`${theme.bgAccent} ${theme.borderAccent} border`}>
@@ -894,7 +910,7 @@ export default function LanguageInterface() {
                               </h3>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 text-left">
                             {learningMode === 'guided-kn-en' 
                               ? 'What does this mean in English?' 
                               : `How do you say this in ${language.name}?`}
