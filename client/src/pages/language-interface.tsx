@@ -287,6 +287,18 @@ export default function LanguageInterface() {
               loadWordAnalysisForItem(item, cacheKey, index);
             }
           });
+        } else {
+          // Clear any pending analysis for items that already have word analysis
+          data.forEach((item: LessonContent, index: number) => {
+            if (item.wordMeanings && item.quickTip) {
+              const itemKey = `${cacheKey}-${index}`;
+              setPendingWordAnalysis(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(itemKey);
+                return newSet;
+              });
+            }
+          });
         }
         
         // Maintain 10-sentence inventory
@@ -330,9 +342,10 @@ export default function LanguageInterface() {
       }
       
       // Remove from pending analysis
+      const itemKey = `${cacheKey}-${index}`;
       setPendingWordAnalysis(prev => {
         const updated = new Set(prev);
-        updated.delete(`${cacheKey}-${index}`);
+        updated.delete(itemKey);
         return updated;
       });
     } catch (error) {
@@ -454,6 +467,10 @@ export default function LanguageInterface() {
       // No more sentences in cache - show loading and generate more
       setIsLoadingNextSentence(true);
       setCurrentContent(null);
+      setUserAnswer("");
+      setShowGuidance(false);
+      setGuidedFeedback(null);
+      setShowCorrectAnswer(false);
       generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
     }
   };
@@ -933,7 +950,7 @@ export default function LanguageInterface() {
                   <WordAnalysisCards 
                     wordMeanings={(currentContent as any)?.wordMeanings}
                     quickTip={(currentContent as any)?.quickTip}
-                    isLoading={!(currentContent as any)?.wordMeanings || (currentContent as any).wordMeanings.length === 0}
+                    isLoading={pendingWordAnalysis.has(`${language?.code}-${level}-${learningMode}-${contentIndex}`)}
                   />
                 )}
 
@@ -1002,7 +1019,7 @@ export default function LanguageInterface() {
                   <WordAnalysisCards 
                     wordMeanings={(currentContent as any)?.wordMeanings}
                     quickTip={(currentContent as any)?.quickTip}
-                    isLoading={!(currentContent as any)?.wordMeanings || (currentContent as any).wordMeanings.length === 0}
+                    isLoading={pendingWordAnalysis.has(`${language?.code}-${level}-${learningMode}-${contentIndex}`)}
                   />
                 )}
 
