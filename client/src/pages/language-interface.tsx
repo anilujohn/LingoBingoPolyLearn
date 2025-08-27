@@ -63,6 +63,12 @@ export default function LanguageInterface() {
   
   // Hybrid loading: Track which content needs word analysis
   const [pendingWordAnalysis, setPendingWordAnalysis] = useState<Set<string>>(new Set());
+  
+  // Loading state for next sentence
+  const [isLoadingNextSentence, setIsLoadingNextSentence] = useState(false);
+  
+  // Track consumed sentences for refill
+  const [consumedSentences, setConsumedSentences] = useState<Set<string>>(new Set());
 
   // Dynamic title state
   const [languageTitle, setLanguageTitle] = useState<string>('');
@@ -266,6 +272,7 @@ export default function LanguageInterface() {
         setGeneratedContent(data);
         setCurrentContent(data[0]);
         setContentIndex(0);
+        setIsLoadingNextSentence(false); // Clear loading state
         
         // If content was generated without word analysis, trigger background analysis
         if (skipWordAnalysis && !fromCache) {
@@ -333,20 +340,23 @@ export default function LanguageInterface() {
     }
   };
   
-  // Inventory management: Maintain 10 sentences per mode
+  // Enhanced inventory management: Maintain 10 fresh sentences per mode
   const queueInventoryManagement = (currentCacheKey: string) => {
     const modes = ['lazy-listen', 'guided-kn-en', 'guided-en-kn'];
+    const levels = ['basic', 'intermediate'];
     
-    modes.forEach(mode => {
-      const cacheKey = `${language?.code}-${level}-${mode}`;
-      const cached = contentCache[cacheKey] || [];
-      const needed = 10 - cached.length;
-      
-      if (needed > 0) {
-        // Prioritize current mode
-        const priority = cacheKey === currentCacheKey ? 'high' : 'low';
-        queueBackgroundGeneration(cacheKey, needed, priority);
-      }
+    levels.forEach(lvl => {
+      modes.forEach(mode => {
+        const cacheKey = `${language?.code}-${lvl}-${mode}`;
+        const cached = contentCache[cacheKey] || [];
+        const needed = 10 - cached.length;
+        
+        if (needed > 0) {
+          // Prioritize current mode and level
+          const priority = (cacheKey === currentCacheKey) ? 'high' : 'low';
+          queueBackgroundGeneration(cacheKey, needed, priority);
+        }
+      });
     });
   };
   
@@ -417,17 +427,34 @@ export default function LanguageInterface() {
     const cacheKey = `${language?.code}-${level}-${learningMode}`;
     const cachedContent = contentCache[cacheKey] || [];
     
+    // Mark current sentence as consumed for refill
+    if (currentContent) {
+      const sentenceKey = `${cacheKey}-${contentIndex}`;
+      setConsumedSentences(prev => {
+        const newSet = new Set(prev);
+        newSet.add(sentenceKey);
+        return newSet;
+      });
+      
+      // Trigger refill for this mode
+      queueBackgroundGeneration(cacheKey, 1, 'high');
+    }
+    
     if (contentIndex < cachedContent.length - 1) {
+      // Move to next sentence in cache
       const newIndex = contentIndex + 1;
       setContentIndex(newIndex);
       setCurrentContent(cachedContent[newIndex]);
-      setGeneratedContent(cachedContent); // Sync with cache
+      setGeneratedContent(cachedContent);
       setUserAnswer("");
       setShowGuidance(false);
       setGuidedFeedback(null);
       setShowCorrectAnswer(false);
     } else {
-      generateContentMutation.mutate({ count: 5 }); // Generate 5 more when reaching end
+      // No more sentences in cache - show loading and generate more
+      setIsLoadingNextSentence(true);
+      setCurrentContent(null);
+      generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
     }
   };
 
@@ -461,29 +488,38 @@ export default function LanguageInterface() {
     return themes[langCode as keyof typeof themes] || themes.kn;
   };
 
-  // Function to extract topic from context
+  // Function to extract topic from context (2-3 words max)
   const getTopicFromContext = (context: string) => {
-    if (!context) return "GENERAL";
+    if (!context) return "General";
     
-    // Extract key topic words
+    // Extract key topic words - keep short (2-3 words max)
     const topicMappings = {
-      'food': 'FOOD & DINING',
-      'restaurant': 'FOOD & DINING', 
-      'tea': 'FOOD & SOCIAL',
-      'chai': 'FOOD & SOCIAL',
-      'travel': 'TRAVEL',
-      'transport': 'TRANSPORT',
-      'shopping': 'SHOPPING',
-      'market': 'SHOPPING',
-      'family': 'FAMILY',
-      'greet': 'GREETINGS',
-      'hello': 'GREETINGS',
-      'work': 'WORK',
-      'office': 'WORK',
-      'time': 'TIME',
-      'money': 'MONEY',
-      'health': 'HEALTH',
-      'weather': 'WEATHER'
+      'restaurant': 'Dining Out',
+      'food': 'Food',
+      'eating': 'Meals',
+      'tea': 'Tea Time',
+      'chai': 'Tea Time',
+      'transport': 'Transport',
+      'bus': 'Public Bus',
+      'taxi': 'Taxi',
+      'shopping': 'Shopping',
+      'market': 'Market',
+      'store': 'Store',
+      'family': 'Family',
+      'greet': 'Greetings',
+      'hello': 'Greetings',
+      'work': 'Work',
+      'office': 'Office',
+      'job': 'Career',
+      'time': 'Time',
+      'money': 'Money',
+      'health': 'Health',
+      'doctor': 'Medical',
+      'weather': 'Weather',
+      'home': 'Home',
+      'hotel': 'Hotel',
+      'phone': 'Phone',
+      'help': 'Help'
     };
 
     const lowerContext = context.toLowerCase();
@@ -493,7 +529,7 @@ export default function LanguageInterface() {
       }
     }
     
-    return "CONVERSATION";
+    return "Daily Life";
   };
 
   if (!language) {
@@ -764,10 +800,12 @@ export default function LanguageInterface() {
             </div>
 
             {/* Loading State */}
-            {generateContentMutation.isPending && (
+            {(generateContentMutation.isPending || isLoadingNextSentence) && (
               <Card>
                 <CardContent className="p-6 text-center">
-                  <p className="text-base text-black">Generating learning content...</p>
+                  <p className="text-base text-black">
+                    {isLoadingNextSentence ? "Loading next sentence..." : "Generating learning content..."}
+                  </p>
                   <div className="animate-pulse mt-2 text-gray-500 text-sm">Please wait</div>
                 </CardContent>
               </Card>
