@@ -158,7 +158,7 @@ export default function LanguageInterface() {
         level,
         category: "Daily Life", 
         count: 1,
-        skipWordAnalysis: false, // Include word analysis for complete content
+        skipWordAnalysis: false, // Always include word analysis with Quick Tips
       });
       return response.json();
     },

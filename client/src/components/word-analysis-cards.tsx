@@ -56,7 +56,7 @@ function renderMarkdownBold(text: string): string {
 
 export function QuickTipCard({ quickTip }: QuickTipCardProps) {
   // Only render if quickTip exists and has meaningful content
-  if (!quickTip || !quickTip.trim() || quickTip.includes("will appear here")) {
+  if (!quickTip || !quickTip.trim()) {
     return null;
   }
 
