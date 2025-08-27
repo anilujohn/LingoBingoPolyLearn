@@ -1,0 +1,20 @@
+[vite] connecting...
+client:618 [vite] connected.
+chunk-WERSD76P.js?v=77293bdd:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+word-analysis-cards.tsx:59 QuickTipCard received: Object
+word-analysis-cards.tsx:59 QuickTipCard received: Object
+word-analysis-cards.tsx:59 QuickTipCard received: Object
+word-analysis-cards.tsx:59 QuickTipCard received: Object
+word-analysis-cards.tsx:59 QuickTipCard received: Object
+word-analysis-cards.tsx:59 QuickTipCard received: Object
+word-analysis-cards.tsx:59 QuickTipCard received: Object
+word-analysis-cards.tsx:59 QuickTipCard received: Object
+word-analysis-cards.tsx:59 QuickTipCard received: Object
+word-analysis-cards.tsx:59 QuickTipCard received: {quickTip: "To say you have something, use the pattern: **mere…** **dard** **hai** means 'I have a stomachache'.", hasContent: true}
+word-analysis-cards.tsx:59 QuickTipCard received: {quickTip: "To say you have something, use the pattern: **mere…** **dard** **hai** means 'I have a stomachache'.", hasContent: true}
+word-analysis-cards.tsx:59 QuickTipCard received: {quickTip: "To say you have something, use the pattern: **mere…** **dard** **hai** means 'I have a stomachache'.", hasContent: true}
+word-analysis-cards.tsx:59 QuickTipCard received: {quickTip: "To express ongoing actions, use **raha** or **rahi…r** **ho raha hai** means 'I am getting a fever'.", hasContent: true}
+word-analysis-cards.tsx:59 QuickTipCard received: {quickTip: "Notice how the question starts with **kya** and en…akte** means 'can' and is placed before **hain**.", hasContent: true}
+word-analysis-cards.tsx:59 QuickTipCard received: {quickTip: "Notice how the question starts with **kya** and en…akte** means 'can' and is placed before **hain**.", hasContent: true}
+word-analysis-cards.tsx:59 QuickTipCard received: {quickTip: "Notice how the question starts with **kya** and en…akte** means 'can' and is placed before **hain**.", hasContent: true}
+word-analysis-cards.tsx:59 QuickTipCard received: {quickTip: "When asking 'How much is this?', use **yah kitne k…here links the price to the item being discussed.", hasContent: true}

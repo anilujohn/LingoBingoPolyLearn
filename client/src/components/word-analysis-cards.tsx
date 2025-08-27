@@ -55,12 +55,8 @@ function renderMarkdownBold(text: string): string {
 }
 
 export function QuickTipCard({ quickTip }: QuickTipCardProps) {
-  // Debug logging
-  console.log('QuickTipCard received:', { quickTip, hasContent: !!quickTip });
-  
   // Only render if quickTip exists and has meaningful content
   if (!quickTip || !quickTip.trim()) {
-    console.log('QuickTipCard: not rendering because no valid quickTip');
     return null;
   }
 
