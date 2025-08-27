@@ -340,9 +340,11 @@ ${includeTranslation ? `Also provide:
               },
               quickTip: { type: "string" }
             },
-            ...(includeTranslation && {
-              required: ["translation"]
-            })
+            required: [
+              "wordMeanings", 
+              "quickTip",
+              ...(includeTranslation ? ["translation"] : [])
+            ]
           }
         }
       });

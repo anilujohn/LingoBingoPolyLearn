@@ -137,7 +137,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/languages/generate-content", async (req, res) => {
     try {
       const { languageCode, level, category, count, model, skipWordAnalysis } = req.body;
-      
       // Get language details from storage
       const language = await storage.getAllLanguages()
         .then(langs => langs.find(l => l.code === languageCode));
@@ -158,12 +157,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         config
       );
 
-      // Skip word analysis if requested (for fast loading)
+      // Skip word analysis if requested (for fast loading)  
       if (skipWordAnalysis) {
         res.json(content);
         return;
       }
-
       // Add word analysis to each content item
       const enhancedContent = await Promise.all(
         content.map(async (item: any) => {
