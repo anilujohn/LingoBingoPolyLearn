@@ -275,14 +275,26 @@ export default function LanguageInterface() {
         }
       } else {
         // Update cache and display content immediately
+        const currentCache = contentCache[cacheKey] || [];
+        const updatedCache = [...currentCache, ...data];
+        
         setContentCache(prev => ({
           ...prev,
-          [cacheKey]: data
+          [cacheKey]: updatedCache
         }));
         
-        setGeneratedContent(data);
-        setCurrentContent(data[0]);
-        setContentIndex(0);
+        // If we have existing content, advance to the next item
+        if (currentCache.length > 0) {
+          const newIndex = currentCache.length; // This will be the index of the first new item
+          setContentIndex(newIndex);
+          setCurrentContent(data[0]);
+          setGeneratedContent(updatedCache);
+        } else {
+          // First time loading content
+          setGeneratedContent(data);
+          setCurrentContent(data[0]);
+          setContentIndex(0);
+        }
         setIsLoadingNextSentence(false); // Clear loading state
         
         // If content was generated without word analysis, trigger background analysis
@@ -451,14 +463,6 @@ export default function LanguageInterface() {
     const cacheKey = `${language?.code}-${level}-${learningMode}`;
     const cachedContent = contentCache[cacheKey] || [];
     
-    console.log('Next Sentence Debug:', {
-      level,
-      learningMode,
-      cacheKey,
-      cachedContentLength: cachedContent.length,
-      contentIndex,
-      currentContent: !!currentContent
-    });
     
     // Store reference to current content before clearing
     const previousContent = currentContent;
@@ -488,20 +492,17 @@ export default function LanguageInterface() {
     if (contentIndex < cachedContent.length - 1) {
       // Move to next sentence in cache - immediate loading
       const newIndex = contentIndex + 1;
-      console.log('Loading from cache, newIndex:', newIndex);
       setContentIndex(newIndex);
       setCurrentContent(cachedContent[newIndex]);
       setGeneratedContent(cachedContent);
       setIsLoadingNextSentence(false);
     } else if (cachedContent.length === 0) {
       // No cache at all - show better loading message
-      console.log('No cache found, generating new content');
       setTimeout(() => {
         generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
       }, 100);
     } else {
       // Reached end of cache - generate more
-      console.log('End of cache reached, generating more');
       generateContentMutation.mutate({ count: 1, skipWordAnalysis: true });
     }
   };

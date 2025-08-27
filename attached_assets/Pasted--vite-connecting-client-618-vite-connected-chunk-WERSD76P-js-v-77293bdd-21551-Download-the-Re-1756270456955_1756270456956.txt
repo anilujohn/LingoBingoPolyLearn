@@ -1,0 +1,45 @@
+[vite] connecting...
+client:618 [vite] connected.
+chunk-WERSD76P.js?v=77293bdd:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+language-interface.tsx:454 Next Sentence Debug: {level: 'basic', learningMode: 'lazy-listen', cacheKey: 'hi-basic-lazy-listen', cachedContentLength: 1, contentIndex: 0, …}cacheKey: "hi-basic-lazy-listen"cachedContentLength: 1contentIndex: 0currentContent: truelearningMode: "lazy-listen"level: "basic"[[Prototype]]: Object
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'basic', learningMode: 'lazy-listen', cacheKey: 'hi-basic-lazy-listen', cachedContentLength: 1, contentIndex: 0, …}cacheKey: "hi-basic-lazy-listen"cachedContentLength: 1contentIndex: 0currentContent: truelearningMode: "lazy-listen"level: "basic"[[Prototype]]: Object
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'basic', learningMode: 'guided-kn-en', cacheKey: 'hi-basic-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'basic', learningMode: 'guided-kn-en', cacheKey: 'hi-basic-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'basic', learningMode: 'guided-kn-en', cacheKey: 'hi-basic-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'basic', learningMode: 'guided-kn-en', cacheKey: 'hi-basic-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'basic', learningMode: 'guided-kn-en', cacheKey: 'hi-basic-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'basic', learningMode: 'guided-kn-en', cacheKey: 'hi-basic-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'basic', learningMode: 'guided-en-kn', cacheKey: 'hi-basic-guided-en-kn', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'basic', learningMode: 'guided-en-kn', cacheKey: 'hi-basic-guided-en-kn', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-en-kn', cacheKey: 'hi-intermediate-guided-en-kn', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-en-kn', cacheKey: 'hi-intermediate-guided-en-kn', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-kn-en', cacheKey: 'hi-intermediate-guided-kn-en', cachedContentLength: 0, contentIndex: 0, …}
+language-interface.tsx:498 No cache found, generating new content
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-kn-en', cacheKey: 'hi-intermediate-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-kn-en', cacheKey: 'hi-intermediate-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-kn-en', cacheKey: 'hi-intermediate-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-kn-en', cacheKey: 'hi-intermediate-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-kn-en', cacheKey: 'hi-intermediate-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-kn-en', cacheKey: 'hi-intermediate-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-kn-en', cacheKey: 'hi-intermediate-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}
+language-interface.tsx:504 End of cache reached, generating more
+language-interface.tsx:454 Next Sentence Debug: {level: 'intermediate', learningMode: 'guided-kn-en', cacheKey: 'hi-intermediate-guided-kn-en', cachedContentLength: 1, contentIndex: 0, …}cacheKey: "hi-intermediate-guided-kn-en"cachedContentLength: 1contentIndex: 0currentContent: truelearningMode: "guided-kn-en"level: "intermediate"[[Prototype]]: Objectconstructor: ƒ Object()hasOwnProperty: ƒ hasOwnProperty()isPrototypeOf: ƒ isPrototypeOf()propertyIsEnumerable: ƒ propertyIsEnumerable()toLocaleString: ƒ toLocaleString()length: 0name: "toLocaleString"arguments: (...)caller: (...)[[Prototype]]: ƒ ()[[Scopes]]: Scopes[0]toString: ƒ toString()valueOf: ƒ valueOf()__defineGetter__: ƒ __defineGetter__()__defineSetter__: ƒ __defineSetter__()__lookupGetter__: ƒ __lookupGetter__()__lookupSetter__: ƒ __lookupSetter__()length: 1name: "__lookupSetter__"arguments: (...)caller: (...)[[Prototype]]: ƒ ()[[Scopes]]: Scopes[0]__proto__: (...)get __proto__: ƒ __proto__()set __proto__: ƒ __proto__()
+language-interface.tsx:504 End of cache reached, generating more
