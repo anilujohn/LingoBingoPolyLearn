@@ -6,18 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import useSpeechRecognition from "@/hooks/use-speech-recognition";
 import { apiRequest } from "@/lib/queryClient";
+import { FeedbackBar } from "@/components/feedback-bar";
+import type { AIInteractionMeta } from "@shared/ai-usage";
 
 interface LessonContentProps {
   lesson: LessonWithProgress;
   mode: string;
-  languageId: string;
 }
 
-export default function LessonContent({ lesson, mode, languageId }: LessonContentProps) {
+export default function LessonContent({ lesson, mode }: LessonContentProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userInput, setUserInput] = useState("");
   const [showAnswer, setShowAnswer] = useState(false);
   const [feedback, setFeedback] = useState<string>("");
+  const [evaluationInteraction, setEvaluationInteraction] = useState<AIInteractionMeta | null>(null);
   const queryClient = useQueryClient();
 
   const content = lesson.content as LessonContentType[];
@@ -37,6 +39,7 @@ export default function LessonContent({ lesson, mode, languageId }: LessonConten
         mode,
         answer,
         contentIndex: currentIndex,
+        languageId: lesson.languageId,
       });
       return response.json();
     },
@@ -45,6 +48,7 @@ export default function LessonContent({ lesson, mode, languageId }: LessonConten
       if (data.correct) {
         queryClient.invalidateQueries({ queryKey: ["/api/user/stats"] });
       }
+      setEvaluationInteraction(data?.interaction ?? null);
     },
   });
 
@@ -90,6 +94,7 @@ export default function LessonContent({ lesson, mode, languageId }: LessonConten
       setUserInput("");
       setShowAnswer(false);
       setFeedback("");
+      setEvaluationInteraction(null);
     }
   };
 
@@ -99,6 +104,7 @@ export default function LessonContent({ lesson, mode, languageId }: LessonConten
       setUserInput("");
       setShowAnswer(false);
       setFeedback("");
+      setEvaluationInteraction(null);
     }
   };
 
@@ -113,7 +119,7 @@ export default function LessonContent({ lesson, mode, languageId }: LessonConten
   };
 
   const handlePlayAudio = () => {
-    playAudioMutation.mutate();
+    playAudioMutation.mutate(undefined);
   };
 
   if (!currentContent) {
@@ -343,6 +349,24 @@ export default function LessonContent({ lesson, mode, languageId }: LessonConten
           </div>
         )}
 
+        {evaluationInteraction && (
+          <FeedbackBar
+            interaction={evaluationInteraction}
+            touchpoint="lesson-check-answer"
+            languageId={lesson.languageId}
+            className="mt-4"
+          />
+        )}
+
+        {evaluationInteraction && (
+          <FeedbackBar
+            interaction={evaluationInteraction}
+            touchpoint="lesson-check-answer"
+            languageId={lesson.languageId}
+            className="mt-4"
+          />
+        )}
+
         {/* Lesson Navigation */}
         {content && content.length > 1 && (
           <div className="flex items-center justify-between pt-6 border-t border-gray-200">
@@ -384,3 +408,4 @@ export default function LessonContent({ lesson, mode, languageId }: LessonConten
     </div>
   );
 }
+

@@ -1,26 +1,96 @@
+import "./env";
 import { GoogleGenAI } from "@google/genai";
 import { LessonContent } from "@shared/schema";
 
 export interface GeminiConfig {
-  model: "gemini-2.5-flash-lite" | "gemini-2.5-pro";
+  model: "gemini-2.5-flash-lite" | "gemini-2.5-flash" | "gemini-2.5-pro";
   temperature?: number;
   maxTokens?: number;
 }
 
+export interface GeminiUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+}
+
+export interface GeminiResult<T> {
+  data: T;
+  usage?: GeminiUsage;
+}
+
+function extractUsageMetadata(response: any): GeminiUsage | undefined {
+  const candidates = [
+    (response as any)?.usageMetadata,
+    (response as any)?.response?.usageMetadata,
+    (response as any)?.result?.usageMetadata,
+    (response as any)?.generateContentResponse?.usageMetadata,
+    (response as any)?.response?.candidates?.[0]?.usageMetadata,
+  ];
+
+  const usage = candidates.find((candidate) => !!candidate);
+  if (!usage) {
+    return undefined;
+  }
+
+  const rawInput = usage.inputTokenCount ?? usage.promptTokenCount ?? undefined;
+  const rawOutput = usage.outputTokenCount ?? usage.candidateTokenCount ?? undefined;
+  let rawTotal = usage.totalTokenCount ?? undefined;
+
+  if (rawTotal === undefined && rawInput !== undefined && rawOutput !== undefined) {
+    rawTotal = rawInput + rawOutput;
+  }
+
+  let inputTokens = rawInput;
+  let outputTokens = rawOutput;
+
+  if (inputTokens === undefined && rawTotal !== undefined && rawOutput !== undefined) {
+    inputTokens = Math.max(rawTotal - rawOutput, 0);
+  }
+
+  if (outputTokens === undefined && rawTotal !== undefined && rawInput !== undefined) {
+    outputTokens = Math.max(rawTotal - rawInput, 0);
+  }
+
+  const totalTokens = rawTotal ?? ((inputTokens ?? 0) + (outputTokens ?? 0));
+
+  return {
+    inputTokens: inputTokens ?? undefined,
+    outputTokens: outputTokens ?? undefined,
+    totalTokens: totalTokens ?? undefined,
+  };
+}
+
+function mergeUsageMetadata(a?: GeminiUsage, b?: GeminiUsage): GeminiUsage | undefined {
+  if (!a && !b) {
+    return undefined;
+  }
+  const inputTokens = (a?.inputTokens ?? 0) + (b?.inputTokens ?? 0);
+  const outputTokens = (a?.outputTokens ?? 0) + (b?.outputTokens ?? 0);
+  const totalTokens = (a?.totalTokens ?? 0) + (b?.totalTokens ?? 0);
+  return {
+    inputTokens: inputTokens || undefined,
+    outputTokens: outputTokens || undefined,
+    totalTokens: totalTokens || undefined,
+  };
+}
+
 export class GeminiService {
   private ai: GoogleGenAI;
-  private defaultConfig: GeminiConfig = {
-    model: "gemini-2.5-flash-lite",
-    temperature: 0.7,
-    maxTokens: 1000,
-  };
+  private defaultConfig: GeminiConfig;
 
-  constructor() {
+  constructor(defaultConfig: Partial<GeminiConfig> = {}) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY environment variable is required");
     }
     this.ai = new GoogleGenAI({ apiKey });
+    this.defaultConfig = {
+      model: "gemini-2.5-flash-lite",
+      temperature: 0.7,
+      maxTokens: 1000,
+      ...defaultConfig,
+    };
   }
 
   async generateContent(
@@ -31,7 +101,7 @@ export class GeminiService {
     category: string,
     count: number = 5,
     config: Partial<GeminiConfig> = {}
-  ): Promise<LessonContent[]> {
+  ): Promise<GeminiResult<LessonContent[]>> {
     const modelConfig = { ...this.defaultConfig, ...config };
     
     const regionContext = this.getRegionContext(languageCode, region);
@@ -120,7 +190,7 @@ Make sure the sentences are authentic to ${region} and would help learners commu
       }
 
       const content = JSON.parse(jsonText) as LessonContent[];
-      return content;
+      return { data: content, usage: extractUsageMetadata(response) };
     } catch (error) {
       console.error("Error generating content with Gemini:", error);
       throw new Error(`Failed to generate content: ${error}`);
@@ -132,7 +202,7 @@ Make sure the sentences are authentic to ${region} and would help learners commu
     sourceLang: string,
     targetLang: string,
     config: Partial<GeminiConfig> = {}
-  ): Promise<{ translation: string; transliteration?: string }> {
+  ): Promise<GeminiResult<{ translation: string; transliteration?: string }>> {
     const modelConfig = { ...this.defaultConfig, ...config };
     
     const prompt = `Translate the following text from ${sourceLang} to ${targetLang}. 
@@ -168,7 +238,11 @@ Make sure the sentences are authentic to ${region} and would help learners commu
         throw new Error("No translation generated");
       }
 
-      return JSON.parse(jsonText);
+      const data = JSON.parse(jsonText) as {
+        translation: string;
+        transliteration?: string;
+      };
+      return { data, usage: extractUsageMetadata(response) };
     } catch (error) {
       console.error("Error translating with Gemini:", error);
       throw new Error(`Failed to translate: ${error}`);
@@ -181,7 +255,7 @@ Make sure the sentences are authentic to ${region} and would help learners commu
     context: string,
     mode: string,
     config: Partial<GeminiConfig> = {}
-  ): Promise<{ isCorrect: boolean; feedback: string; score: number }> {
+  ): Promise<GeminiResult<{ isCorrect: boolean; feedback: string; score: number }>> {
     const modelConfig = { ...this.defaultConfig, ...config };
     
     const prompt = `You are a language learning tutor providing feedback on student answers.
@@ -227,7 +301,14 @@ Return ONLY a JSON object with this structure:
         throw new Error("No feedback generated");
       }
 
-      return JSON.parse(jsonText);
+      return {
+        data: JSON.parse(jsonText) as {
+          isCorrect: boolean;
+          feedback: string;
+          score: number;
+        },
+        usage: extractUsageMetadata(response),
+      };
     } catch (error) {
       console.error("Error checking answer with Gemini:", error);
       throw new Error(`Failed to check answer: ${error}`);
@@ -260,16 +341,18 @@ Return ONLY a JSON object with this structure:
     languageCode: string,
     includeTranslation: boolean = false,
     config: Partial<GeminiConfig> = {}
-  ): Promise<{
-    translation?: string;
-    transliteration?: string;
-    wordMeanings?: Array<{
-      word: string;
-      meaning: string;
+  ): Promise<
+    GeminiResult<{
+      translation?: string;
       transliteration?: string;
-    }>;
-    quickTip?: string;
-  }> {
+      wordMeanings?: Array<{
+        word: string;
+        meaning: string;
+        transliteration?: string;
+      }>;
+      quickTip?: string;
+    }>
+  > {
     const languageName = languageCode === 'kn' ? 'Kannada' : 'Hindi';
     const regionContext = languageCode === 'kn' ? 'Karnataka/Bangalore' : 'India';
     
@@ -351,13 +434,16 @@ ${includeTranslation ? `Also provide:
 
       const jsonText = response.text;
       if (!jsonText) {
-        return {};
+        return { data: {}, usage: extractUsageMetadata(response) };
       }
 
-      return JSON.parse(jsonText);
+      return {
+        data: JSON.parse(jsonText),
+        usage: extractUsageMetadata(response),
+      };
     } catch (error) {
       console.error("Error analyzing text pair:", error);
-      return {};
+      return { data: {}, usage: undefined };
     }
   }
 
@@ -368,33 +454,41 @@ ${includeTranslation ? `Also provide:
     targetLang: string,
     languageCode: string,
     config: Partial<GeminiConfig> = {}
-  ): Promise<{
-    translation: string;
-    transliteration?: string;
-    wordMeanings?: Array<{
-      word: string;
-      meaning: string;
+  ): Promise<
+    GeminiResult<{
+      translation: string;
       transliteration?: string;
-    }>;
-    quickTip?: string;
-  }> {
+      wordMeanings?: Array<{
+        word: string;
+        meaning: string;
+        transliteration?: string;
+      }>;
+      quickTip?: string;
+    }>
+  > {
     // First translate the text
     const translation = await this.translateText(text, sourceLang, targetLang, config);
-    
+
     // Then analyze the English-Target pair using unified method
     const analysis = await this.analyzeTextPair(
       text,
-      translation.translation,
+      translation.data.translation,
       languageCode,
       true,
       config
     );
-    
+
+    const usage = mergeUsageMetadata(translation.usage, analysis.usage);
+
     return {
-      translation: translation.translation,
-      transliteration: translation.transliteration || analysis.transliteration,
-      wordMeanings: analysis.wordMeanings,
-      quickTip: analysis.quickTip
+      data: {
+        translation: translation.data.translation,
+        transliteration:
+          translation.data.transliteration || analysis.data.transliteration,
+        wordMeanings: analysis.data.wordMeanings,
+        quickTip: analysis.data.quickTip,
+      },
+      usage,
     };
   }
 
@@ -404,11 +498,11 @@ ${includeTranslation ? `Also provide:
     context: string,
     mode: string,
     config: Partial<GeminiConfig> = {}
-  ): Promise<{
+  ): Promise<GeminiResult<{
     whatsRight: string;
     mainPointToImprove: string;
     hint: string;
-  }> {
+  }>> {
     const modelConfig = { ...this.defaultConfig, ...config };
     
     const prompt = `You are a language learning tutor providing structured feedback.
@@ -456,7 +550,14 @@ Return ONLY a JSON object with this structure:
         throw new Error("No detailed feedback generated");
       }
 
-      return JSON.parse(jsonText);
+      return {
+        data: JSON.parse(jsonText) as {
+          whatsRight: string;
+          mainPointToImprove: string;
+          hint: string;
+        },
+        usage: extractUsageMetadata(response),
+      };
     } catch (error) {
       console.error("Error generating detailed feedback:", error);
       throw new Error(`Failed to generate detailed feedback: ${error}`);
@@ -468,14 +569,16 @@ Return ONLY a JSON object with this structure:
     englishText: string,
     targetText: string,
     languageCode: string
-  ): Promise<{
-    wordMeanings?: Array<{
-      word: string;
-      meaning: string;
-      transliteration?: string;
-    }>;
-    quickTip?: string;
-  }> {
+  ): Promise<
+    GeminiResult<{
+      wordMeanings?: Array<{
+        word: string;
+        meaning: string;
+        transliteration?: string;
+      }>;
+      quickTip?: string;
+    }>
+  > {
     return this.analyzeTextPair(englishText, targetText, languageCode, false);
   }
 
@@ -512,3 +615,5 @@ Return ONLY the title text, nothing else.`;
 }
 
 export const geminiService = new GeminiService();
+
+

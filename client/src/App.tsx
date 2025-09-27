@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import LanguageHub from "@/pages/language-hub";
 import LearningInterface from "@/pages/learning-interface";
 import LanguageInterface from "@/pages/language-interface";
+import AdminAIModels from "@/pages/admin-ai-models";
+import AdminAIUsage from "@/pages/admin-ai-usage";
 import TopNavigation from "@/components/top-navigation";
 
 function Router() {
@@ -17,6 +19,8 @@ function Router() {
         <Route path="/learn/:languageId" component={LanguageInterface} />
         <Route path="/learn/:languageId/:mode" component={LearningInterface} />
         <Route path="/translate/:languageId" component={LanguageInterface} />
+        <Route path="/admin/ai-models" component={AdminAIModels} />
+        <Route path="/admin/ai-usage" component={AdminAIUsage} />
         <Route>
           <div className="flex items-center justify-center h-64">
             <p className="text-gray-500">Page not found</p>
@@ -39,3 +43,5 @@ function App() {
 }
 
 export default App;
+
+

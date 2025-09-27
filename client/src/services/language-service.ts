@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/queryClient";
 import { LessonContent } from "@shared/schema";
+import type { AIModelId } from "@shared/ai-models";
 
 export class LanguageService {
   static async generateContent(
@@ -7,7 +8,8 @@ export class LanguageService {
     level: string,
     category: string,
     count: number = 5,
-    model?: "gemini-2.5-flash" | "gemini-2.5-pro"
+    model?: AIModelId,
+    languageId?: string
   ): Promise<LessonContent[]> {
     const response = await apiRequest("POST", "/api/languages/generate-content", {
       languageCode,
@@ -15,20 +17,34 @@ export class LanguageService {
       category,
       count,
       model,
+      languageId,
     });
-    return response.json();
+    const data = await response.json();
+    return Array.isArray(data) ? data : data.items ?? [];
   }
 
   static async translateText(
     text: string,
     sourceLang: string,
-    targetLang: string
+    targetLang: string,
+    model?: AIModelId,
+    languageId?: string
   ): Promise<string> {
-    const response = await apiRequest("POST", "/api/languages/translate", {
+    const body: Record<string, unknown> = {
       text,
       sourceLang,
       targetLang,
-    });
+    };
+
+    if (model) {
+      body.model = model;
+    }
+
+    if (languageId) {
+      body.languageId = languageId;
+    }
+
+    const response = await apiRequest("POST", "/api/languages/translate", body);
     const data = await response.json();
     return data.translation;
   }
@@ -60,13 +76,25 @@ export class LanguageService {
   static async checkAnswer(
     userAnswer: string,
     correctAnswer: string,
-    context: string
+    context: string,
+    model?: AIModelId,
+    languageId?: string
   ): Promise<{ isCorrect: boolean; feedback: string; score: number }> {
-    const response = await apiRequest("POST", "/api/languages/check-answer", {
+    const body: Record<string, unknown> = {
       userAnswer,
       correctAnswer,
       context,
-    });
+    };
+
+    if (model) {
+      body.model = model;
+    }
+
+    if (languageId) {
+      body.languageId = languageId;
+    }
+
+    const response = await apiRequest("POST", "/api/languages/check-answer", body);
     return response.json();
   }
 }

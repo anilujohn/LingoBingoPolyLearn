@@ -111,7 +111,6 @@ export default function LearningInterface() {
           <LessonContent 
             lesson={currentLesson} 
             mode={params.mode || "listen"}
-            languageId={params.languageId}
           />
         </div>
       )}

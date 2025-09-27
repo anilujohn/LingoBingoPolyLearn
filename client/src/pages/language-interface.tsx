@@ -11,6 +11,8 @@ import { Mic, Volume2, ArrowLeft } from "lucide-react";
 import useSpeechRecognition from "@/hooks/use-speech-recognition";
 import { useToast } from "@/hooks/use-toast";
 import { WordAnalysisCards } from "@/components/word-analysis-cards";
+import { FeedbackBar } from "@/components/feedback-bar";
+import type { AIInteractionMeta } from "@shared/ai-usage";
 
 interface TranslationResult {
   translation: string;
@@ -21,12 +23,14 @@ interface TranslationResult {
     transliteration?: string;
   }>;
   quickTip?: string;
+  interaction?: AIInteractionMeta;
 }
 
 interface GuidedFeedback {
   whatsRight: string;
   mainPointToImprove: string;
   hint: string;
+  interaction?: AIInteractionMeta;
 }
 
 export default function LanguageInterface() {
@@ -40,7 +44,8 @@ export default function LanguageInterface() {
   // Translate mode state
   const [inputText, setInputText] = useState("");
   const [translationResult, setTranslationResult] = useState<TranslationResult | null>(null);
-  
+  const [translationInteraction, setTranslationInteraction] = useState<AIInteractionMeta | null>(null);
+
   // Learn mode state
   const [level, setLevel] = useState<'basic' | 'intermediate'>('basic');
   const [learningMode, setLearningMode] = useState<'lazy-listen' | 'guided-kn-en' | 'guided-en-kn'>('lazy-listen');
@@ -51,6 +56,8 @@ export default function LanguageInterface() {
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
   // Loading state for next sentence
   const [isLoadingNextSentence, setIsLoadingNextSentence] = useState(false);
+  const [contentInteraction, setContentInteraction] = useState<AIInteractionMeta | null>(null);
+  const [evaluationInteraction, setEvaluationInteraction] = useState<AIInteractionMeta | null>(null);
   
 
   // Dynamic title state
@@ -64,9 +71,17 @@ export default function LanguageInterface() {
   });
   
 
+  const speechRecognitionLanguage = functionality === "translate"
+    ? "en-US"
+    : language?.code === "kn"
+      ? "kn-IN"
+      : language?.code === "hi"
+        ? "hi-IN"
+        : "en-US";
+
   // Speech recognition
   const { startListening, stopListening, isListening, transcript } = useSpeechRecognition({
-    language: language?.code === 'kn' ? 'kn-IN' : 'hi-IN',
+    language: speechRecognitionLanguage,
     onResult: (result: string) => {
       if (functionality === 'translate') {
         setInputText(result);
@@ -112,12 +127,15 @@ export default function LanguageInterface() {
   useEffect(() => {
     setInputText("");
     setTranslationResult(null);
+    setTranslationInteraction(null);
     setUserAnswer("");
     setShowGuidance(false);
     setGuidedFeedback(null);
     setShowCorrectAnswer(false);
     setCurrentContent(null);
     setIsLoadingNextSentence(false);
+    setContentInteraction(null);
+    setEvaluationInteraction(null);
   }, [functionality, level, learningMode]);
 
   // Auto-generate content when learn mode settings change
@@ -135,11 +153,13 @@ export default function LanguageInterface() {
         sourceLang: "English",
         targetLang: language?.name,
         languageCode: language?.code,
+        languageId: language?.id,
       });
       return response.json();
     },
     onSuccess: (data) => {
       setTranslationResult(data);
+      setTranslationInteraction(data?.interaction ?? null);
     },
     onError: (error) => {
       toast({
@@ -159,11 +179,17 @@ export default function LanguageInterface() {
         category: "Daily Life", 
         count: 1,
         skipWordAnalysis: false, // Always include word analysis with Quick Tips
+        languageId: language?.id,
+        learningMode,
       });
       return response.json();
     },
     onSuccess: (data) => {
-      setCurrentContent(data[0]);
+      setCurrentContent(Array.isArray(data) ? data[0] : data?.items?.[0] ?? null);
+      const interaction: AIInteractionMeta | null = Array.isArray(data)
+        ? null
+        : (data?.interaction ?? null);
+      setContentInteraction(interaction);
       setIsLoadingNextSentence(false);
     },
     onError: (error) => {
@@ -173,6 +199,7 @@ export default function LanguageInterface() {
         variant: "destructive",
       });
       setIsLoadingNextSentence(false);
+      setContentInteraction(null);
     },
   });
 
@@ -188,11 +215,18 @@ export default function LanguageInterface() {
         correctAnswer,
         context: currentContent?.context,
         mode: learningMode,
+        languageId: language?.id,
+        level,
       });
       return response.json();
     },
     onSuccess: (data) => {
-      setGuidedFeedback(data);
+      const interaction = (data as { interaction?: AIInteractionMeta }).interaction ?? null;
+      const { interaction: _interaction, ...rest } = data as GuidedFeedback & {
+        interaction?: AIInteractionMeta;
+      };
+      setGuidedFeedback({ ...rest, interaction: interaction ?? undefined });
+      setEvaluationInteraction(interaction);
       setShowGuidance(true);
     },
     onError: (error) => {
@@ -206,20 +240,39 @@ export default function LanguageInterface() {
 
   // Text-to-speech functionality
   const playAudio = (text: string) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      const voices = speechSynthesis.getVoices();
-      const targetLang = language?.code === "kn" ? "kn" : "hi";
-      const voice = voices.find(v => v.lang.startsWith(targetLang)) || voices[0];
-      
+    if (!('speechSynthesis' in window)) {
+      return;
+    }
+
+    const synth = window.speechSynthesis;
+    const utterance = new SpeechSynthesisUtterance(text);
+    const targetLang = language?.code === "kn" ? "kn" : "hi";
+
+    const assignVoiceAndSpeak = () => {
+      const voices = synth.getVoices();
+      const voice = voices.find((v) => v.lang?.toLowerCase().startsWith(targetLang)) || voices[0];
+
       if (voice) {
         utterance.voice = voice;
       }
-      
+
+      utterance.lang = voice?.lang || targetLang;
       utterance.rate = 0.8;
       utterance.pitch = 1.0;
-      
-      speechSynthesis.speak(utterance);
+
+      synth.cancel();
+      synth.speak(utterance);
+    };
+
+    if (synth.getVoices().length > 0) {
+      assignVoiceAndSpeak();
+    } else {
+      const handleVoicesChanged = () => {
+        assignVoiceAndSpeak();
+        synth.removeEventListener('voiceschanged', handleVoicesChanged);
+      };
+      synth.addEventListener('voiceschanged', handleVoicesChanged);
+      synth.getVoices();
     }
   };
 
@@ -231,7 +284,9 @@ export default function LanguageInterface() {
     setGuidedFeedback(null);
     setShowCorrectAnswer(false);
     setIsLoadingNextSentence(true);
-    
+    setContentInteraction(null);
+    setEvaluationInteraction(null);
+
     // Generate new content - simple approach
     generateContentMutation.mutate();
   };
@@ -477,6 +532,7 @@ export default function LanguageInterface() {
                     onClick={() => {
                       setInputText("");
                       setTranslationResult(null);
+                      setTranslationInteraction(null);
                     }}
                     data-testid="clear-btn"
                   >
@@ -518,6 +574,13 @@ export default function LanguageInterface() {
                 <WordAnalysisCards 
                   wordMeanings={translationResult.wordMeanings}
                   quickTip={translationResult.quickTip}
+                />
+
+                <FeedbackBar
+                  interaction={translationResult.interaction ?? translationInteraction}
+                  touchpoint="translation-with-analysis"
+                  languageId={language?.id}
+                  className="mt-3"
                 />
               </div>
             )}
@@ -721,6 +784,15 @@ export default function LanguageInterface() {
                   />
                 )}
 
+                {contentInteraction && learningMode === 'lazy-listen' && (
+                  <FeedbackBar
+                    interaction={contentInteraction}
+                    touchpoint="content-generation"
+                    languageId={language?.id}
+                    className="mt-3"
+                  />
+                )}
+
                 {/* Guidance Section */}
                 {showGuidance && guidedFeedback && (
                   <Card className="bg-blue-50 border-blue-200">
@@ -742,6 +814,16 @@ export default function LanguageInterface() {
                       </div>
                     </CardContent>
                   </Card>
+                )}
+
+                {showGuidance && evaluationInteraction && (
+                  <FeedbackBar
+                    interaction={evaluationInteraction}
+                    touchpoint="check-answer-detailed"
+                    languageId={language?.id}
+                    className="mt-3"
+                    reasons={["accuracy", "tone", "complexity", "other"]}
+                  />
                 )}
 
                 {/* Correct Answer Section */}
@@ -787,6 +869,15 @@ export default function LanguageInterface() {
                     wordMeanings={(currentContent as any)?.wordMeanings}
                     quickTip={(currentContent as any)?.quickTip}
                     isLoading={false}
+                  />
+                )}
+
+                {showCorrectAnswer && contentInteraction && (
+                  <FeedbackBar
+                    interaction={contentInteraction}
+                    touchpoint="reveal-answer"
+                    languageId={language?.id}
+                    className="mt-3"
                   />
                 )}
 

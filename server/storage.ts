@@ -1,7 +1,7 @@
-import { 
-  type User, 
-  type InsertUser, 
-  type Language, 
+import {
+  type User,
+  type InsertUser,
+  type Language,
   type InsertLanguage,
   type UserProgress,
   type InsertUserProgress,
@@ -13,8 +13,28 @@ import {
   type InsertUserAchievement,
   type LessonContent,
   type LanguageWithProgress,
-  type UserStats
+  type UserStats,
 } from "@shared/schema";
+import { DEFAULT_AI_MODEL_ID, type AIModelId } from "@shared/ai-models";
+import {
+  type AIUsageRecord,
+  type AIUsageRecordInput,
+  type AIUsageQueryFilters,
+  type DailyAIUsageSummary,
+  type AIUsageMetadata,
+} from "@shared/ai-usage";
+import {
+  type AIResponseFeedback,
+  type FeedbackQueryFilters,
+  type FeedbackSummaryResponse,
+  type FeedbackSummaryBucket,
+} from "@shared/feedback";
+import {
+  type EngagementEvent,
+  type EngagementQueryFilters,
+  type EngagementSummaryResponse,
+  type EngagementSummaryBucket,
+} from "@shared/engagement";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -52,6 +72,40 @@ export interface IStorage {
 
   // Stats operations
   getUserStats(userId: string): Promise<UserStats>;
+
+  // AI model selection
+  getAISettings(): Promise<{ activeModelId: AIModelId }>;
+  setActiveAIModel(modelId: AIModelId): Promise<void>;
+
+  // AI usage tracking
+  logAIUsage(record: AIUsageRecordInput): Promise<AIUsageRecord>;
+  listAIUsage(filters?: AIUsageQueryFilters): Promise<AIUsageRecord[]>;
+  getDailyAIUsageSummaries(filters?: AIUsageQueryFilters): Promise<DailyAIUsageSummary[]>;
+  getAIUsageRecordById(id: string): Promise<AIUsageRecord | undefined>;
+
+  // Feedback tracking
+  logFeedback(
+    feedback: Omit<AIResponseFeedback, "id" | "createdAt"> & {
+      id?: string;
+      createdAt?: string;
+    }
+  ): Promise<AIResponseFeedback>;
+  updateFeedback(
+    id: string,
+    updates: Partial<Pick<AIResponseFeedback, "signal" | "reason" | "comment" | "xpDelta" | "touchpoint" | "context">>
+  ): Promise<AIResponseFeedback | undefined>;
+  listFeedback(filters?: FeedbackQueryFilters): Promise<AIResponseFeedback[]>;
+  getFeedbackSummary(filters?: FeedbackQueryFilters): Promise<FeedbackSummaryResponse>;
+
+  // Engagement tracking
+  logEngagementEvent(
+    event: Omit<EngagementEvent, "id" | "timestamp"> & {
+      id?: string;
+      timestamp?: string;
+    }
+  ): Promise<EngagementEvent>;
+  listEngagementEvents(filters?: EngagementQueryFilters): Promise<EngagementEvent[]>;
+  getEngagementSummary(filters?: EngagementQueryFilters): Promise<EngagementSummaryResponse>;
 }
 
 export class MemStorage implements IStorage {
@@ -61,9 +115,201 @@ export class MemStorage implements IStorage {
   private lessons: Map<string, Lesson> = new Map();
   private achievements: Map<string, Achievement> = new Map();
   private userAchievements: Map<string, UserAchievement> = new Map();
+  private aiSettings: { activeModelId: AIModelId } = { activeModelId: DEFAULT_AI_MODEL_ID };
+  private aiUsageRecords: AIUsageRecord[] = [];
+  private feedbackRecords: AIResponseFeedback[] = [];
+  private engagementEvents: EngagementEvent[] = [];
 
   constructor() {
     this.initializeData();
+  }
+
+  private filterAIUsageRecords(filters: AIUsageQueryFilters = {}): AIUsageRecord[] {
+    const { userId, start, end, modelId, operation, feature } = filters;
+    let records = [...this.aiUsageRecords];
+
+    if (userId) {
+      records = records.filter((record) => record.userId === userId);
+    }
+
+    if (modelId) {
+      records = records.filter((record) => record.modelId === modelId);
+    }
+
+    if (operation) {
+      records = records.filter((record) => record.operation === operation);
+    }
+
+    if (feature) {
+      records = records.filter((record) => record.feature === feature);
+    }
+
+    if (start) {
+      const startDate = new Date(start).getTime();
+      if (!Number.isNaN(startDate)) {
+        records = records.filter((record) => new Date(record.timestamp).getTime() >= startDate);
+      }
+    }
+
+    if (end) {
+      const endDate = new Date(end).getTime();
+      if (!Number.isNaN(endDate)) {
+        records = records.filter((record) => new Date(record.timestamp).getTime() <= endDate);
+      }
+    }
+
+    return records.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  }
+
+  private filterFeedbackRecords(filters: FeedbackQueryFilters = {}): AIResponseFeedback[] {
+    const {
+      userId,
+      languageId,
+      modelId,
+      feature,
+      operation,
+      touchpoint,
+      signal,
+      functionality,
+      learningMode,
+      learningLevel,
+      start,
+      end,
+    } = filters;
+
+    let records = [...this.feedbackRecords];
+
+    if (userId) {
+      records = records.filter((record) => record.userId === userId);
+    }
+
+    if (languageId) {
+      records = records.filter((record) => record.languageId === languageId);
+    }
+
+    if (modelId) {
+      records = records.filter((record) => record.modelId === modelId);
+    }
+
+    if (feature) {
+      records = records.filter((record) => record.feature === feature);
+    }
+
+    if (operation) {
+      records = records.filter((record) => record.operation === operation);
+    }
+
+    if (touchpoint) {
+      records = records.filter((record) => record.touchpoint === touchpoint);
+    }
+
+    if (signal) {
+      records = records.filter((record) => record.signal === signal);
+    }
+
+    if (functionality) {
+      records = records.filter((record) => record.functionality === functionality);
+    }
+
+    if (learningMode) {
+      records = records.filter((record) => record.learningMode === learningMode);
+    }
+
+    if (learningLevel) {
+      records = records.filter((record) => record.learningLevel === learningLevel);
+    }
+
+    if (start) {
+      const startDate = new Date(start).getTime();
+      if (!Number.isNaN(startDate)) {
+        records = records.filter((record) => new Date(record.createdAt).getTime() >= startDate);
+      }
+    }
+
+    if (end) {
+      const endDate = new Date(end).getTime();
+      if (!Number.isNaN(endDate)) {
+        records = records.filter((record) => new Date(record.createdAt).getTime() <= endDate);
+      }
+    }
+
+    return records.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
+
+  private filterEngagementEvents(filters: EngagementQueryFilters = {}): EngagementEvent[] {
+    const {
+      userId,
+      languageId,
+      modelId,
+      feature,
+      operation,
+      action,
+      functionality,
+      learningMode,
+      learningLevel,
+      start,
+      end,
+    } = filters;
+
+    let events = [...this.engagementEvents];
+
+    if (userId) {
+      events = events.filter((event) => event.userId === userId);
+    }
+
+    if (languageId) {
+      events = events.filter((event) => event.languageId === languageId);
+    }
+
+    if (modelId) {
+      events = events.filter((event) => event.modelId === modelId);
+    }
+
+    if (feature) {
+      events = events.filter((event) => event.feature === feature);
+    }
+
+    if (operation) {
+      events = events.filter((event) => event.operation === operation);
+    }
+
+    if (action) {
+      events = events.filter((event) => event.action === action);
+    }
+
+    if (functionality) {
+      events = events.filter((event) => event.functionality === functionality);
+    }
+
+    if (learningMode) {
+      events = events.filter((event) => event.learningMode === learningMode);
+    }
+
+    if (learningLevel) {
+      events = events.filter((event) => event.learningLevel === learningLevel);
+    }
+
+    if (start) {
+      const startDate = new Date(start).getTime();
+      if (!Number.isNaN(startDate)) {
+        events = events.filter((event) => new Date(event.timestamp).getTime() >= startDate);
+      }
+    }
+
+    if (end) {
+      const endDate = new Date(end).getTime();
+      if (!Number.isNaN(endDate)) {
+        events = events.filter((event) => new Date(event.timestamp).getTime() <= endDate);
+      }
+    }
+
+    return events.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
   }
 
   private initializeData() {
@@ -386,6 +632,310 @@ export class MemStorage implements IStorage {
     return newUserAchievement;
   }
 
+  async getAISettings(): Promise<{ activeModelId: AIModelId }> {
+    return { ...this.aiSettings };
+  }
+
+  async setActiveAIModel(modelId: AIModelId): Promise<void> {
+    this.aiSettings.activeModelId = modelId;
+  }
+
+  async logAIUsage(record: AIUsageRecordInput): Promise<AIUsageRecord> {
+    const id = record.id ?? randomUUID();
+    const timestamp = record.timestamp ?? new Date().toISOString();
+
+    const sanitized: AIUsageRecord = {
+      id,
+      timestamp,
+      userId: record.userId,
+      sessionId: record.sessionId,
+      provider: record.provider,
+      modelId: record.modelId,
+      operation: record.operation,
+      feature: record.feature,
+      inputTokens: record.inputTokens ?? 0,
+      outputTokens: record.outputTokens ?? 0,
+      totalTokens:
+        record.totalTokens ??
+        ((record.inputTokens ?? 0) + (record.outputTokens ?? 0)),
+      inputCost: record.inputCost ?? 0,
+      outputCost: record.outputCost ?? 0,
+      totalCost:
+        record.totalCost ?? (record.inputCost ?? 0) + (record.outputCost ?? 0),
+      currency: record.currency ?? "USD",
+      metadata: record.metadata,
+      durationMs: record.durationMs,
+    };
+
+    this.aiUsageRecords.push(sanitized);
+    return sanitized;
+  }
+
+  async listAIUsage(filters: AIUsageQueryFilters = {}): Promise<AIUsageRecord[]> {
+    const records = this.filterAIUsageRecords(filters);
+    const limit = filters.limit && filters.limit > 0 ? filters.limit : undefined;
+    return limit ? records.slice(0, limit) : records;
+  }
+
+  async getDailyAIUsageSummaries(
+    filters: AIUsageQueryFilters = {}
+  ): Promise<DailyAIUsageSummary[]> {
+    const records = this.filterAIUsageRecords({ ...filters, limit: undefined });
+    const summaries = new Map<string, DailyAIUsageSummary>();
+
+    for (const record of records) {
+      const dateKey = new Date(record.timestamp).toISOString().slice(0, 10);
+      const summaryKey = `${dateKey}::${record.userId}::${record.provider}::${record.modelId}`;
+      const existing = summaries.get(summaryKey);
+
+      if (!existing) {
+        summaries.set(summaryKey, {
+          date: dateKey,
+          userId: record.userId,
+          provider: record.provider,
+          modelId: record.modelId,
+          inputTokens: record.inputTokens,
+          outputTokens: record.outputTokens,
+          totalTokens: record.totalTokens,
+          inputCost: record.inputCost,
+          outputCost: record.outputCost,
+          totalCost: record.totalCost,
+          currency: record.currency,
+        });
+      } else {
+        existing.inputTokens += record.inputTokens;
+        existing.outputTokens += record.outputTokens;
+        existing.totalTokens += record.totalTokens;
+        existing.inputCost += record.inputCost;
+        existing.outputCost += record.outputCost;
+        existing.totalCost += record.totalCost;
+      }
+    }
+
+    const sorted = Array.from(summaries.values()).sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    const limit = filters.limit && filters.limit > 0 ? filters.limit : undefined;
+    return limit ? sorted.slice(0, limit) : sorted;
+  }
+
+  async logFeedback(
+    feedback: Omit<AIResponseFeedback, "id" | "createdAt"> & {
+      id?: string;
+      createdAt?: string;
+    }
+  ): Promise<AIResponseFeedback> {
+    const id = feedback.id ?? randomUUID();
+    const createdAt = feedback.createdAt ?? new Date().toISOString();
+
+    const record: AIResponseFeedback = {
+      ...feedback,
+      id,
+      createdAt,
+    };
+
+    this.feedbackRecords.push(record);
+    return record;
+  }
+
+  async updateFeedback(
+    id: string,
+    updates: Partial<Pick<AIResponseFeedback, "signal" | "reason" | "comment" | "xpDelta" | "touchpoint" | "context">>
+  ): Promise<AIResponseFeedback | undefined> {
+    const index = this.feedbackRecords.findIndex((record) => record.id === id);
+    if (index === -1) {
+      return undefined;
+    }
+
+    const existing = this.feedbackRecords[index];
+    const updated: AIResponseFeedback = {
+      ...existing,
+      ...updates,
+    };
+    this.feedbackRecords[index] = updated;
+    return updated;
+  }
+
+  async listFeedback(filters: FeedbackQueryFilters = {}): Promise<AIResponseFeedback[]> {
+    const records = this.filterFeedbackRecords({ ...filters, limit: undefined });
+    const limit = filters.limit && filters.limit > 0 ? filters.limit : undefined;
+    return limit ? records.slice(0, limit) : records;
+  }
+
+  async getFeedbackSummary(filters: FeedbackQueryFilters = {}): Promise<FeedbackSummaryResponse> {
+    const records = this.filterFeedbackRecords({ ...filters, limit: undefined });
+    const summaryMap = new Map<string, FeedbackSummaryBucket>();
+
+    for (const record of records) {
+      const date = new Date(record.createdAt).toISOString().slice(0, 10);
+      const key = [
+        date,
+        record.userId ?? "",
+        record.languageId ?? "",
+        record.modelId,
+        record.feature,
+        record.functionality ?? "",
+        record.learningMode ?? "",
+        record.learningLevel ?? "",
+      ].join("::");
+      let bucket = summaryMap.get(key);
+
+      if (!bucket) {
+        bucket = {
+          date,
+          userId: record.userId,
+          languageId: record.languageId,
+          modelId: record.modelId,
+          feature: record.feature,
+          functionality: record.functionality,
+          learningMode: record.learningMode,
+          learningLevel: record.learningLevel,
+          total: 0,
+          positive: 0,
+          negative: 0,
+          neutral: 0,
+        };
+        summaryMap.set(key, bucket);
+      }
+
+      bucket.total += 1;
+      if (record.signal === "positive") {
+        bucket.positive += 1;
+      } else if (record.signal === "negative") {
+        bucket.negative += 1;
+      } else {
+        bucket.neutral += 1;
+      }
+    }
+
+    const buckets = Array.from(summaryMap.values()).sort((a, b) => {
+      if (a.date === b.date) {
+        return (b.total ?? 0) - (a.total ?? 0);
+      }
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+
+    const limit = filters.limit && filters.limit > 0 ? filters.limit : undefined;
+    return {
+      buckets: limit ? buckets.slice(0, limit) : buckets,
+    };
+  }
+
+  async logEngagementEvent(
+    event: Omit<EngagementEvent, "id" | "timestamp"> & { id?: string; timestamp?: string }
+  ): Promise<EngagementEvent> {
+    const id = event.id ?? randomUUID();
+    const timestamp = event.timestamp ?? new Date().toISOString();
+
+    const record: EngagementEvent = {
+      ...event,
+      id,
+      timestamp,
+    };
+
+    this.engagementEvents.push(record);
+    return record;
+  }
+
+  async listEngagementEvents(filters: EngagementQueryFilters = {}): Promise<EngagementEvent[]> {
+    const events = this.filterEngagementEvents({ ...filters, limit: undefined });
+    const limit = filters.limit && filters.limit > 0 ? filters.limit : undefined;
+    return limit ? events.slice(0, limit) : events;
+  }
+
+  async getEngagementSummary(
+    filters: EngagementQueryFilters = {}
+  ): Promise<EngagementSummaryResponse> {
+    const events = this.filterEngagementEvents({ ...filters, limit: undefined });
+    const groups = new Map<string, EngagementEvent[]>();
+
+    for (const event of events) {
+      const date = new Date(event.timestamp).toISOString().slice(0, 10);
+      const key = [
+        event.userId,
+        date,
+        event.languageId ?? "",
+        event.modelId,
+        event.feature,
+        event.functionality ?? "",
+        event.learningMode ?? "",
+        event.learningLevel ?? "",
+      ].join("::");
+
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(event);
+    }
+
+    const ninetySeconds = 90 * 1000;
+    const buckets: EngagementSummaryBucket[] = [];
+
+    for (const [key, groupEvents] of Array.from(groups.entries())) {
+      const sortedAsc = [...groupEvents].sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      let previousTimestamp: number | undefined = undefined;
+      let activeSeconds = 0;
+      let xpTotal = 0;
+
+      for (const event of sortedAsc) {
+        const currentTimestamp = new Date(event.timestamp).getTime();
+        xpTotal += event.xpDelta ?? 0;
+
+        if (previousTimestamp !== undefined) {
+          const diffMs = currentTimestamp - previousTimestamp;
+          if (diffMs <= ninetySeconds) {
+            activeSeconds += diffMs / 1000;
+          }
+        }
+
+        previousTimestamp = currentTimestamp;
+      }
+
+      const [userId, date, languageIdRaw, modelId, feature, functionality, learningMode, learningLevel] =
+        key.split("::");
+      const actionCount = sortedAsc.length;
+      const activeMinutes = activeSeconds / 60;
+      const xpPerActiveMinute = activeMinutes > 0 ? xpTotal / activeMinutes : xpTotal;
+      const actionsPerActiveMinute = activeMinutes > 0 ? actionCount / activeMinutes : actionCount;
+
+      buckets.push({
+        date,
+        userId,
+        languageId: languageIdRaw || undefined,
+        modelId: modelId as AIModelId,
+        feature,
+        functionality: functionality || undefined,
+        learningMode: learningMode || undefined,
+        learningLevel: learningLevel || undefined,
+        actionCount,
+        xpTotal,
+        activeMinutes,
+        xpPerActiveMinute,
+        actionsPerActiveMinute,
+      });
+    }
+
+    buckets.sort((a, b) => {
+      if (a.date === b.date) {
+        return b.actionCount - a.actionCount;
+      }
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+
+    const limit = filters.limit && filters.limit > 0 ? filters.limit : undefined;
+    return {
+      buckets: limit ? buckets.slice(0, limit) : buckets,
+    };
+  }
+
+  async getAIUsageRecordById(id: string): Promise<AIUsageRecord | undefined> {
+    return this.aiUsageRecords.find((record) => record.id === id);
+  }
+
   async getUserStats(userId: string): Promise<UserStats> {
     const user = this.users.get(userId);
     if (!user) throw new Error("User not found");
@@ -407,3 +957,6 @@ export class MemStorage implements IStorage {
 }
 
 export const storage = new MemStorage();
+
+
+
