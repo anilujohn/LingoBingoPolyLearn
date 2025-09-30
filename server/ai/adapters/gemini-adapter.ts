@@ -6,7 +6,7 @@ import type {
   AIModelResponse,
   CheckAnswerDetailedResult,
   CheckAnswerResult,
-  TranslationResult,
+  BasicTranslationResult,
   TranslationWithAnalysisResult,
   WordAnalysisResult,
 } from "../types";
@@ -72,12 +72,14 @@ export class GeminiAdapter implements AIModelAdapter {
   async analyzeWordsForLearning(
     englishText: string,
     targetText: string,
-    languageCode: string
+    languageCode: string,
+    everydayVariant?: string
   ): Promise<AIModelResponse<WordAnalysisResult>> {
     const result = await this.service.analyzeWordsForLearning(
       englishText,
       targetText,
-      languageCode
+      languageCode,
+      everydayVariant
     );
     return toAIModelResponse(result);
   }
@@ -86,7 +88,7 @@ export class GeminiAdapter implements AIModelAdapter {
     text: string,
     sourceLang: string,
     targetLang: string
-  ): Promise<AIModelResponse<TranslationResult>> {
+  ): Promise<AIModelResponse<BasicTranslationResult>> {
     const result = await this.service.translateText(text, sourceLang, targetLang, {
       model: this.googleModelId,
     });

@@ -114,10 +114,21 @@ export type UserAchievement = typeof userAchievements.$inferSelect;
 export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
 
 // Lesson content type
+export interface LessonContentVariant {
+  text: string;
+  transliteration?: string;
+}
+
+export interface LessonContentVariants {
+  everyday: LessonContentVariant;
+  classical: LessonContentVariant;
+}
+
 export interface LessonContent {
   english: string;
-  target: string;
-  transliteration?: string;
+  variants: LessonContentVariants;
+  target?: string; // legacy compatibility fallback
+  transliteration?: string; // legacy compatibility fallback
   context?: string;
   explanation?: string;
   audioUrl?: string;
@@ -127,6 +138,7 @@ export interface LessonContent {
     transliteration?: string;
   }>;
   quickTip?: string;
+  defaultVariant?: keyof LessonContentVariants;
 }
 
 // API response types

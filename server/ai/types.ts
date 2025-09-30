@@ -1,7 +1,7 @@
-import { LessonContent } from "@shared/schema";
+import { LessonContent, LessonContentVariants } from "@shared/schema";
 import type { AIModelInfo, AIModelId } from "@shared/ai-models";
 
-export interface TranslationResult {
+export interface BasicTranslationResult {
   translation: string;
   transliteration?: string;
 }
@@ -17,7 +17,13 @@ export interface WordAnalysisResult {
   quickTip?: string;
 }
 
-export interface TranslationWithAnalysisResult extends TranslationResult, WordAnalysisResult {}
+export interface DualTranslationResult {
+  variants: LessonContentVariants;
+  defaultVariant?: keyof LessonContentVariants;
+  contextNote?: string;
+}
+
+export interface TranslationWithAnalysisResult extends DualTranslationResult, WordAnalysisResult {}
 
 export interface CheckAnswerResult {
   isCorrect: boolean;
@@ -56,13 +62,14 @@ export interface AIModelAdapter {
   analyzeWordsForLearning(
     englishText: string,
     targetText: string,
-    languageCode: string
+    languageCode: string,
+    everydayVariant?: string
   ): Promise<AIModelResponse<WordAnalysisResult>>;
   translateText(
     text: string,
     sourceLang: string,
     targetLang: string
-  ): Promise<AIModelResponse<TranslationResult>>;
+  ): Promise<AIModelResponse<BasicTranslationResult>>;
   translateWithAnalysis(
     text: string,
     sourceLang: string,
