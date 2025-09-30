@@ -291,10 +291,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content.map(async (item: any) => {
           try {
             const wordStart = performance.now();
+            const classicalText = item?.variants?.classical?.text ?? item?.variants?.everyday?.text ?? "";
+            const everydayText = item?.variants?.everyday?.text ?? item?.variants?.classical?.text ?? classicalText;
             const analysisResponse = await adapter.analyzeWordsForLearning(
               item.english,
-              item.target,
-              languageCode
+              classicalText,
+              languageCode,
+              everydayText
             );
             const wordDurationMs = Math.max(0, Math.round(performance.now() - wordStart));
             await recordAIUsage({
@@ -352,10 +355,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { content, languageCode, languageId, learningMode, learningLevel } = req.body;
       const adapter = await resolveAdapterFromRequest(req.body?.model);
       const start = performance.now();
+      const classicalText = content?.variants?.classical?.text ?? content?.variants?.everyday?.text ?? "";
+      const everydayText = content?.variants?.everyday?.text ?? content?.variants?.classical?.text ?? classicalText;
       const analysisResponse = await adapter.analyzeWordsForLearning(
         content.english,
-        content.target,
-        languageCode
+        classicalText,
+        languageCode,
+        everydayText
       );
       const durationMs = Math.max(0, Math.round(performance.now() - start));
       await recordAIUsage({
@@ -547,8 +553,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           languageId: language?.id ?? languageId,
           textLength: text.length,
           sourceText: text,
-          translationText: responsePayload.data.translation,
-          transliteration: responsePayload.data.transliteration,
+          everydayText: responsePayload.data.variants?.everyday?.text,
+          classicalText: responsePayload.data.variants?.classical?.text,
+          everydayTransliteration: responsePayload.data.variants?.everyday?.transliteration,
+          classicalTransliteration: responsePayload.data.variants?.classical?.transliteration,
+          defaultVariant: responsePayload.data.defaultVariant,
           functionality: "translate",
         },
         engagement: {
@@ -668,9 +677,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Fallback to basic content if generation fails
             lesson.content = [{
               english: "Welcome to your lesson",
-              target: language.code === "kn" ? "ನಿಮ್ಮ ಪಾಠಕ್ಕೆ ಸ್ವಾಗತ" : "आपके पाठ में स्वागत है",
+              variants: {
+                everyday: {
+                  text: language.code === "kn" ? "Nimma paathakke swaagata" : "Aapke paath mein swaagat hai",
+                  transliteration: language.code === "kn" ? "nimma paathakke swaagata" : "aapke paath mein swaagat hai",
+                },
+                classical: {
+                  text: language.code === "kn" ? "Nimma paathakke swaagata" : "Aapke paath mein swaagat hai",
+                  transliteration: language.code === "kn" ? "nimma paathakke swaagata" : "aapke paath mein swaagat hai",
+                },
+              },
+              target: language.code === "kn" ? "Nimma paathakke swaagata" : "Aapke paath mein swaagat hai",
               transliteration: language.code === "kn" ? "nimma paathakke swaagata" : "aapke paath mein swaagat hai",
-              context: "General welcome message"
+              context: "General welcome message",
+              defaultVariant: "everyday",
             }];
           }
         }
@@ -700,7 +720,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!content) {
         return res.status(400).json({ message: "Invalid content index" });
       }
-      const correctAnswer = mode === "guide" ? content.english : content.target;
+      const fallbackTarget = content?.variants?.classical?.text ?? content?.variants?.everyday?.text ?? content.target;
+      const correctAnswer = mode === "guide" ? content.english : fallbackTarget;
       const context = content.context || `${lesson.category} - ${lesson.level} level`;
       const start = performance.now();
       const responsePayload = await adapter.checkAnswer(

@@ -5,18 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Language, LessonContent } from "@shared/schema";
+import { Language, LessonContent, LessonContentVariants } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Mic, Volume2, ArrowLeft } from "lucide-react";
 import useSpeechRecognition from "@/hooks/use-speech-recognition";
 import { useToast } from "@/hooks/use-toast";
 import { WordAnalysisCards } from "@/components/word-analysis-cards";
+import { DualVariantDisplay } from "@/components/dual-variant-display";
 import { FeedbackBar } from "@/components/feedback-bar";
 import type { AIInteractionMeta } from "@shared/ai-usage";
 
+type VariantKey = keyof LessonContentVariants;
+
 interface TranslationResult {
-  translation: string;
-  transliteration?: string;
+  variants: LessonContentVariants;
+  defaultVariant?: VariantKey;
+  contextNote?: string;
   wordMeanings?: Array<{
     word: string;
     meaning: string;
@@ -45,11 +49,13 @@ export default function LanguageInterface() {
   const [inputText, setInputText] = useState("");
   const [translationResult, setTranslationResult] = useState<TranslationResult | null>(null);
   const [translationInteraction, setTranslationInteraction] = useState<AIInteractionMeta | null>(null);
+  const [showBothTranslationVariants, setShowBothTranslationVariants] = useState(false);
 
   // Learn mode state
   const [level, setLevel] = useState<'basic' | 'intermediate'>('basic');
   const [learningMode, setLearningMode] = useState<'lazy-listen' | 'guided-kn-en' | 'guided-en-kn'>('lazy-listen');
   const [currentContent, setCurrentContent] = useState<LessonContent | null>(null);
+  const [showBothContentVariants, setShowBothContentVariants] = useState(false);
   const [userAnswer, setUserAnswer] = useState("");
   const [showGuidance, setShowGuidance] = useState(false);
   const [guidedFeedback, setGuidedFeedback] = useState<GuidedFeedback | null>(null);
@@ -128,11 +134,13 @@ export default function LanguageInterface() {
     setInputText("");
     setTranslationResult(null);
     setTranslationInteraction(null);
+    setShowBothTranslationVariants(false);
     setUserAnswer("");
     setShowGuidance(false);
     setGuidedFeedback(null);
     setShowCorrectAnswer(false);
     setCurrentContent(null);
+    setShowBothContentVariants(false);
     setIsLoadingNextSentence(false);
     setContentInteraction(null);
     setEvaluationInteraction(null);
@@ -160,6 +168,7 @@ export default function LanguageInterface() {
     onSuccess: (data) => {
       setTranslationResult(data);
       setTranslationInteraction(data?.interaction ?? null);
+      setShowBothTranslationVariants(false);
     },
     onError: (error) => {
       toast({
@@ -185,11 +194,16 @@ export default function LanguageInterface() {
       return response.json();
     },
     onSuccess: (data) => {
-      setCurrentContent(Array.isArray(data) ? data[0] : data?.items?.[0] ?? null);
+      const nextContent: LessonContent | null = Array.isArray(data)
+        ? data[0] ?? null
+        : data?.items?.[0] ?? null;
+      setCurrentContent(nextContent);
       const interaction: AIInteractionMeta | null = Array.isArray(data)
         ? null
         : (data?.interaction ?? null);
       setContentInteraction(interaction);
+      const preferredVariant = (nextContent?.defaultVariant ?? 'everyday') as VariantKey;
+      setShowBothContentVariants(false);
       setIsLoadingNextSentence(false);
     },
     onError: (error) => {
@@ -208,7 +222,7 @@ export default function LanguageInterface() {
     mutationFn: async () => {
       const correctAnswer = learningMode === 'guided-kn-en' 
         ? currentContent?.english 
-        : currentContent?.target;
+        : currentContent?.variants?.classical?.text ?? currentContent?.variants?.everyday?.text ?? '';
 
       const response = await apiRequest("POST", "/api/languages/check-answer-detailed", {
         userAnswer,
@@ -239,25 +253,46 @@ export default function LanguageInterface() {
   });
 
   // Text-to-speech functionality
-  const playAudio = (text: string) => {
-    if (!('speechSynthesis' in window)) {
+  const playAudio = (explicitText?: string) => {
+    const fallbackText =
+      functionality === 'translate' ? translationPronounceText : contentPronounceText;
+    const textToSpeak = explicitText?.trim().length ? explicitText : fallbackText;
+
+    if (!textToSpeak?.trim() || !('speechSynthesis' in window)) {
       return;
     }
 
     const synth = window.speechSynthesis;
-    const utterance = new SpeechSynthesisUtterance(text);
-    const targetLang = language?.code === "kn" ? "kn" : "hi";
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    const preferredLocales =
+      language?.code === 'kn'
+        ? ['kn-IN', 'kn', 'hi-IN', 'hi', 'en-IN', 'en']
+        : ['hi-IN', 'hi', 'kn-IN', 'kn', 'en-IN', 'en'];
 
-    const assignVoiceAndSpeak = () => {
+    utterance.lang = preferredLocales[0];
+
+    const findVoice = () => {
       const voices = synth.getVoices();
-      const voice = voices.find((v) => v.lang?.toLowerCase().startsWith(targetLang)) || voices[0];
+      for (const locale of preferredLocales) {
+        const match = voices.find((voice) => {
+          const lang = voice.lang?.toLowerCase() ?? '';
+          const needle = locale.toLowerCase();
+          return lang === needle || lang.startsWith(needle);
+        });
+        if (match) {
+          return match;
+        }
+      }
+      return voices.find((voice) => voice.lang?.toLowerCase().includes('en')) || voices[0];
+    };
 
+    const speak = () => {
+      const voice = findVoice();
       if (voice) {
         utterance.voice = voice;
+        utterance.lang = voice.lang;
       }
-
-      utterance.lang = voice?.lang || targetLang;
-      utterance.rate = 0.8;
+      utterance.rate = 0.88;
       utterance.pitch = 1.0;
 
       synth.cancel();
@@ -265,10 +300,10 @@ export default function LanguageInterface() {
     };
 
     if (synth.getVoices().length > 0) {
-      assignVoiceAndSpeak();
+      speak();
     } else {
       const handleVoicesChanged = () => {
-        assignVoiceAndSpeak();
+        speak();
         synth.removeEventListener('voiceschanged', handleVoicesChanged);
       };
       synth.addEventListener('voiceschanged', handleVoicesChanged);
@@ -283,6 +318,7 @@ export default function LanguageInterface() {
     setShowGuidance(false);
     setGuidedFeedback(null);
     setShowCorrectAnswer(false);
+    setShowBothContentVariants(false);
     setIsLoadingNextSentence(true);
     setContentInteraction(null);
     setEvaluationInteraction(null);
@@ -290,6 +326,35 @@ export default function LanguageInterface() {
     // Generate new content - simple approach
     generateContentMutation.mutate();
   };
+
+  const translationVariants = translationResult?.variants;
+  const everydayTranslationVariant = translationVariants?.everyday;
+  const classicalTranslationVariant = translationVariants?.classical;
+  const translationAudioText =
+    everydayTranslationVariant?.text || classicalTranslationVariant?.text || '';
+  const everydayDisplayText = everydayTranslationVariant?.text || translationAudioText;
+  const everydayDisplayTransliteration =
+    everydayTranslationVariant?.transliteration ||
+    (!everydayTranslationVariant?.text ? classicalTranslationVariant?.transliteration : undefined);
+  const canShowPureTranslation = Boolean(classicalTranslationVariant?.text);
+  const shouldShowPureTranslation = canShowPureTranslation && showBothTranslationVariants;
+  const translationPronounceText = everydayDisplayText || classicalTranslationVariant?.text || translationAudioText;
+
+  const everydayContentVariant = currentContent?.variants?.everyday ?? currentContent?.variants?.classical;
+  const classicalContentVariant = currentContent?.variants?.classical ?? currentContent?.variants?.everyday;
+  const contentAudioText = everydayContentVariant?.text
+    || classicalContentVariant?.text
+    || currentContent?.english
+    || '';
+  const everydayContentText = everydayContentVariant?.text || contentAudioText;
+  const everydayContentTransliteration =
+    everydayContentVariant?.transliteration ||
+    (!everydayContentVariant?.text ? classicalContentVariant?.transliteration : undefined);
+  const contentPronounceText = everydayContentText || classicalContentVariant?.text || contentAudioText;
+
+  const canPreviewVariants = learningMode !== 'guided-en-kn' || showCorrectAnswer;
+  const allowPureContentReveal = canPreviewVariants && Boolean(classicalContentVariant?.text);
+  const shouldShowPureContent = allowPureContentReveal && showBothContentVariants;
 
   const handleRevealAnswer = () => {
     setShowCorrectAnswer(true);
@@ -543,35 +608,28 @@ export default function LanguageInterface() {
             </Card>
 
             {/* Translation Results */}
-            {translationResult && (
+            {translationResult && translationVariants && (
               <div className="space-y-3">
-                {/* Main Translation */}
                 <Card className={`${theme.bgAccent} ${theme.borderAccent} border`}>
                   <CardContent className="p-4">
-                    <div className="space-y-2">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-500 mb-1">{translationResult.translation}</p>
-                        {translationResult.transliteration && (
-                          <div className="flex items-center justify-center gap-3">
-                            <p className="text-2xl font-bold text-black">{translationResult.transliteration}</p>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => playAudio(translationResult.translation)}
-                              data-testid="pronounce-btn"
-                            >
-                              <Volume2 className="w-4 h-4 mr-1" />
-                              Pronounce
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    <DualVariantDisplay
+                      heading="Everyday Blend - with common English words"
+                      everydayText={everydayDisplayText}
+                      everydayTransliteration={everydayDisplayTransliteration}
+                      pureText={classicalTranslationVariant?.text}
+                      pureTransliteration={classicalTranslationVariant?.transliteration}
+                      showPure={shouldShowPureTranslation}
+                      onTogglePure={() => setShowBothTranslationVariants((prev) => !prev)}
+                      showToggle={canShowPureTranslation}
+                      onPronounceEveryday={playAudio}
+                      onPronouncePure={(text) => playAudio(text || classicalTranslationVariant?.text)}
+                      pronounceEverydayText={translationPronounceText}
+                      pronouncePureText={classicalTranslationVariant?.text}
+                    />
                   </CardContent>
                 </Card>
 
-                {/* Word Meanings & Quick Tip */}
-                <WordAnalysisCards 
+                <WordAnalysisCards
                   wordMeanings={translationResult.wordMeanings}
                   quickTip={translationResult.quickTip}
                 />
@@ -588,74 +646,6 @@ export default function LanguageInterface() {
         ) : (
           /* Learn with Examples */
           <div className="space-y-4">
-            {/* Modern Segmented Learning Mode Selection */}
-            <div className="mb-3">
-              <h3 className="text-sm font-semibold mb-2 text-center text-gray-900">Learning Mode</h3>
-              <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
-                <Button
-                  variant="ghost"
-                  onClick={() => setLearningMode('lazy-listen')}
-                  className={`flex-1 text-xs py-2 px-2 rounded-md transition-all ${
-                    learningMode === 'lazy-listen' 
-                      ? 'bg-white shadow-md border-2 border-blue-400 font-bold text-black' 
-                      : 'hover:bg-white/50 text-gray-700'
-                  }`}
-                  data-testid="lazy-listen-btn"
-                >
-                  <div className="text-center">
-                    <div className="font-medium">Lazy Listen</div>
-                    <div className="text-xs opacity-70">({theme.scripts.source} → {theme.scripts.target})</div>
-                  </div>
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  onClick={() => setLearningMode('guided-kn-en')}
-                  className={`flex-1 text-xs py-2 px-2 rounded-md transition-all ${
-                    learningMode === 'guided-kn-en' 
-                      ? 'bg-white shadow-md border-2 border-blue-400 font-bold text-black' 
-                      : 'hover:bg-white/50 text-gray-700'
-                  }`}
-                  data-testid="guided-kn-en-btn"
-                >
-                  <div className="text-center">
-                    <div className="font-medium">Guided</div>
-                    <div className="text-xs opacity-70">({theme.scripts.target} → {theme.scripts.source})</div>
-                  </div>
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  onClick={() => setLearningMode('guided-en-kn')}
-                  className={`flex-1 text-xs py-2 px-2 rounded-md transition-all ${
-                    learningMode === 'guided-en-kn' 
-                      ? 'bg-white shadow-md border-2 border-blue-400 font-bold text-black' 
-                      : 'hover:bg-white/50 text-gray-700'
-                  }`}
-                  data-testid="guided-en-kn-btn"
-                >
-                  <div className="text-center">
-                    <div className="font-medium">Guided</div>
-                    <div className="text-xs opacity-70">({theme.scripts.source} → {theme.scripts.target})</div>
-                  </div>
-                </Button>
-              </div>
-            </div>
-
-            {/* Loading State */}
-            {(generateContentMutation.isPending || isLoadingNextSentence || !currentContent) && (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <p className="text-base text-black">
-                    {isLoadingNextSentence ? "Loading next sentence..." : 
-                     !currentContent ? "Preparing content..." : 
-                     "Generating learning content..."}
-                  </p>
-                  <div className="animate-pulse mt-2 text-gray-500 text-sm">Please wait</div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Learning Content */}
             {currentContent && !isLoadingNextSentence && (
               <div className="space-y-3">
@@ -672,54 +662,48 @@ export default function LanguageInterface() {
                       // Lazy Listen Mode
                       <div className="text-center space-y-3">
                         <h3 className="text-base text-black font-medium">{currentContent.english}</h3>
-                        <div className="space-y-2">
-                          <div className="text-center">
-                            <p className="text-sm text-gray-500 mb-1">{currentContent.target}</p>
-                            <div className="flex items-center justify-center gap-3">
-                              <p className="text-2xl font-bold text-black">{currentContent.transliteration}</p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => playAudio(currentContent.target)}
-                                data-testid="pronounce-btn"
-                              >
-                                <Volume2 className="w-4 h-4 mr-1" />
-                                Pronounce
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
+                        <DualVariantDisplay
+                          heading="Everyday Blend - with common English words"
+                          everydayText={everydayContentText}
+                          everydayTransliteration={everydayContentTransliteration}
+                          pureText={classicalContentVariant?.text}
+                          pureTransliteration={classicalContentVariant?.transliteration}
+                          showPure={shouldShowPureContent}
+                          onTogglePure={() => setShowBothContentVariants((prev) => !prev)}
+                          showToggle={allowPureContentReveal}
+                          onPronounceEveryday={playAudio}
+                          onPronouncePure={(text) => playAudio(text || classicalContentVariant?.text)}
+                          pronounceEverydayText={contentPronounceText}
+                          pronouncePureText={classicalContentVariant?.text}
+                        />
                       </div>
                     ) : (
                       // Guided Workout Mode
                       <div className="space-y-3">
                         <div className="text-center space-y-3">
-                          <div>
-                            {learningMode === 'guided-kn-en' ? (
-                              <div className="mb-3">
-                                <p className="text-sm text-gray-500 mb-1">{currentContent.target}</p>
-                                <div className="flex items-center justify-center gap-3 mb-2">
-                                  <p className="text-xl font-bold text-black">{currentContent.transliteration}</p>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => playAudio(currentContent.target)}
-                                    data-testid="pronounce-kn-btn"
-                                  >
-                                    <Volume2 className="w-4 h-4 mr-1" />
-                                    Pronounce
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <h3 className="text-base font-medium text-black mb-2">
-                                {currentContent.english}
-                              </h3>
-                            )}
-                          </div>
+                          {learningMode === 'guided-kn-en' ? (
+                            <DualVariantDisplay
+                              heading="Everyday Blend - with common English words"
+                              everydayText={everydayContentText}
+                              everydayTransliteration={everydayContentTransliteration}
+                              pureText={classicalContentVariant?.text}
+                              pureTransliteration={classicalContentVariant?.transliteration}
+                              showPure={shouldShowPureContent}
+                              onTogglePure={() => setShowBothContentVariants((prev) => !prev)}
+                              showToggle={allowPureContentReveal}
+                              onPronounceEveryday={playAudio}
+                              onPronouncePure={(text) => playAudio(text || classicalContentVariant?.text)}
+                              pronounceEverydayText={contentPronounceText}
+                              pronouncePureText={classicalContentVariant?.text}
+                            />
+                          ) : (
+                            <h3 className="text-base font-medium text-black mb-2">
+                              {currentContent.english}
+                            </h3>
+                          )}
                           <p className="text-sm text-gray-600 text-left">
-                            {learningMode === 'guided-kn-en' 
-                              ? 'What does this mean in English?' 
+                            {learningMode === 'guided-kn-en'
+                              ? 'What does this mean in English?'
                               : `How do you say this in ${language.name}?`}
                           </p>
                         </div>
@@ -772,14 +756,14 @@ export default function LanguageInterface() {
                         </div>
                       </div>
                     )}
-                  </CardContent>
+                    </CardContent>
                 </Card>
 
                 {/* Word Meanings and Quick Tip for Lazy Listen Mode */}
                 {learningMode === 'lazy-listen' && (
                   <WordAnalysisCards 
-                    wordMeanings={(currentContent as any)?.wordMeanings}
-                    quickTip={(currentContent as any)?.quickTip}
+                    wordMeanings={currentContent?.wordMeanings}
+                    quickTip={currentContent?.quickTip}
                     isLoading={false}
                   />
                 )}
@@ -832,42 +816,41 @@ export default function LanguageInterface() {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-green-900 text-base">Correct Answer</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="text-center">
-                          <p className="text-base font-medium text-green-900 mb-2">
-                            {learningMode === 'guided-kn-en' 
-                              ? currentContent.english 
-                              : currentContent.english}
-                          </p>
-                          {learningMode === 'guided-en-kn' && (
-                            <div>
-                              <p className="text-sm text-green-600 mb-1">{currentContent.target}</p>
-                              <div className="flex items-center justify-center gap-3">
-                                <p className="text-lg font-bold text-green-900">{currentContent.transliteration}</p>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => playAudio(currentContent.target)}
-                                  data-testid="pronounce-correct-btn"
-                                >
-                                  <Volume2 className="w-4 h-4 mr-1" />
-                                  Pronounce
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                    <CardContent className="space-y-4">
+                      <div className="text-center space-y-1">
+                        <p className="text-base font-medium text-green-900">{currentContent.english}</p>
+                        <p className="text-xs text-green-700">
+                          {learningMode === 'guided-kn-en'
+                            ? 'Meaning in English'
+                            : `Say it in ${language.name}`}
+                        </p>
                       </div>
+                      <DualVariantDisplay
+                        heading="Everyday Blend - with common English words"
+                        everydayText={everydayContentText}
+                        everydayTransliteration={everydayContentTransliteration}
+                        pureHeading="Pure Translation"
+                        pureText={classicalContentVariant?.text}
+                        pureTransliteration={classicalContentVariant?.transliteration}
+                        showPure={shouldShowPureContent}
+                        onTogglePure={() => setShowBothContentVariants((prev) => !prev)}
+                        showToggle={allowPureContentReveal}
+                        onPronounceEveryday={playAudio}
+                        onPronouncePure={(text) => playAudio(text || classicalContentVariant?.text)}
+                        pronounceEverydayText={contentPronounceText}
+                        pronouncePureText={classicalContentVariant?.text}
+                        pureCardClassName="bg-white"
+                      />
                     </CardContent>
                   </Card>
                 )}
 
+
                 {/* Word Meanings and Quick Tip - Only show after reveal answer */}
                 {showCorrectAnswer && (
                   <WordAnalysisCards 
-                    wordMeanings={(currentContent as any)?.wordMeanings}
-                    quickTip={(currentContent as any)?.quickTip}
+                    wordMeanings={currentContent?.wordMeanings}
+                    quickTip={currentContent?.quickTip}
                     isLoading={false}
                   />
                 )}
